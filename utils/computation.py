@@ -11,7 +11,7 @@ def non_max_suppression(model_output):
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
 
-    conf_thresh = 0.5
+    conf_thresh = 0.005
     nms_thresh = 0.4
 
     model_output[..., :4] = xywh2xyxy(model_output[..., :4])  # 8, 845, 25
@@ -127,10 +127,10 @@ def get_batch_metrics(predictions, targets):
     return batch_metrics
 
 
-def show_eval_result(metrics, labels):
+def show_eval_result(metrics, labels, logger):
     true_positives, pred_conf, pred_labels = [np.concatenate(x, 0) for x in list(zip(*metrics))]
     precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_conf, pred_labels, labels)
-    print(f"mAP: {AP.mean()}")
+    logger.print_log(f"mAP: {AP.mean()}")
 
 
 def ap_per_class(tp, conf, pred_cls, target_cls):

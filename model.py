@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
+import torch.optim as optim
 import tqdm
 from modules import *
-from utils import *
+from utils.computation import *
 
 class BaseModel(object):
     def set_train_state(self, *names):
@@ -45,32 +47,72 @@ class BaseModel(object):
             getattr(self, m).eval()
 
 class Model(BaseModel):
-    def __init__(self, options):
+    def __init__(self, options, logger):
         super(BaseModel, self).__init__()
+        self.logger = logger
         self.modules_def = self.parse_model_cfg(options.model_cfg)
         self.hyper_parameters, self.module_list = self.get_module_list()
 
-    def forward(self, inputs, training=False):
-        if training:
-            outputs = self.module_list(inputs)
+        self.optimizer = optim.SGD(self.module_list.parameters(),
+                                   lr=self.hyper_parameters['learning_rate'],
+                                   momentum=self.hyper_parameters['momentum'],
+                                   weight_decay=self.hyper_parameters['decay'])
+
+    def forward(self, inputs, targets=None):
+        outputs = None
+        if targets is not None:
+            loss = 0
+            for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+                if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
+                    inputs = module(inputs)
+                elif module_def["type"] == "region":
+                    outputs, region_loss = module[0](inputs, targets)
+                    loss += region_loss
+                else:
+                    print('unknown type %s' % (module_def['type']))
+            outputs = outputs.detach().cpu()
+            return outputs, loss
         else:
             with torch.no_grad():
-                outputs = self.module_list(inputs)
-        return outputs
+                for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
+                        inputs = module(inputs)
+                    elif module_def["type"] == "region":
+                        outputs, _ = module[0](inputs)
+                    else:
+                        print('unknown type %s' % (module_def['type']))
+            outputs = outputs.detach().cpu()
+            return outputs
 
-    def train(self):
-        pass
+    def train(self, options, dataloader):
+        for epoch in range(options.epochs):
+            self.set_train_state()
+            for batch_i, (imgs, targets) in enumerate(dataloader):
+                imgs = Variable(imgs.type(torch.cuda.FloatTensor))
+                targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
+                outputs, loss = self.forward(imgs, targets)
+                loss.backward()
+                self.optimizer.zero_grad()
+                self.optimizer.step()
+
+
 
     def eval(self, dataloader):
+        self.set_eval_state()
         metrics = []
         labels = []
         for batch_i, (imgs, targets) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
-            labels += targets[:, 1].tolist()  # [num_gt_boxes]
-            outputs = self.forward(imgs)  # B,125,13,13
+            labels += targets[:, 1].tolist()
+            imgs = Variable(imgs.type(torch.cuda.FloatTensor), requires_grad=False)
+            # Rescale target
+            targets[:, 2:] = xywh2xyxy(targets[:, 2:])
+            targets[:, 2:] *= int(self.hyper_parameters['width'])
+
+            outputs = self.forward(imgs, training=False)  # B,845,25
             predictions = non_max_suppression(outputs)
             metrics += get_batch_metrics(predictions, targets)
 
-        show_eval_result(metrics, labels)
+        show_eval_result(metrics, labels, self.logger)
 
     def parse_model_cfg(self, model_cfg_path):
         """
@@ -162,6 +204,7 @@ class Model(BaseModel):
             else:
                 print('unknown type %s' % (module_def['type']))
 
+            modules = modules.cuda()
             module_list.append(modules)
 
         return hyper_parameters, module_list

@@ -45,7 +45,7 @@ class RegionLoss(nn.Module):
     def __init__(self, module_def, hyper_parameters):
         super(RegionLoss, self).__init__()
         assert hyper_parameters['width']==hyper_parameters['height'], "img width must equals to height"
-        self.img_size = hyper_parameters['width']
+        self.img_size = int(hyper_parameters['width'])
 
         anchors = module_def['anchors'].split(',')
         self.anchors = [float(i) for i in anchors]
@@ -95,7 +95,7 @@ class RegionLoss(nn.Module):
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
-        stride = self.img_size / grid_size
+        stride = int(self.img_size / grid_size)
         output = torch.cat(
             (
                 pred_boxes.view(num_samples, -1, 4) * stride,
@@ -108,4 +108,9 @@ class RegionLoss(nn.Module):
         if targets is None:
             return output, 0
         else:
-            assert False, "not here"
+            assert False, "no"
+
+            loss_x = self.coord_scale * nn.MSELoss(x[obj_mask], tx[obj_mask])
+            loss_y = self.coord_scale * nn.MSELoss(y[obj_mask], ty[obj_mask])
+            loss_w = self.coord_scale * nn.MSELoss(w[obj_mask], tw[obj_mask])
+            loss_h = self.coord_scale * nn.MSELoss(h[obj_mask], th[obj_mask])

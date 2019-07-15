@@ -12,12 +12,12 @@ class Yolov2Dataset(Dataset):
     def __init__(self, options, training=False, multiscale=False):
         self.data_cfg = self.parse_data_cfg(options.data_cfg)
         if training:
-            assert False, "not here"
+            path = self.data_cfg["train"]
         else:
             path = self.data_cfg["valid"]
         with open(path, "r") as file:
             self.img_files = file.readlines()
-        if path.find('voc') != -1:
+        if self.data_cfg['names'].find('voc') != -1:
             self.label_files = [
                 path.replace("JPEGImages", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
                 for path in self.img_files
@@ -57,7 +57,8 @@ class Yolov2Dataset(Dataset):
 
         # ----- Label -----
         label_path = self.label_files[index % len(self.img_files)].rstrip()
-
+        # import pydevd_pycharm
+        # pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
         targets = None
         if os.path.exists(label_path):
             boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
@@ -85,10 +86,10 @@ class Yolov2Dataset(Dataset):
             if np.random.random() < 0.5:
                 img, targets = horizontal_flip(img, targets)
 
-        return img_path, img, targets
+        return img, targets
 
     def collate_fn(self, batch):
-        paths, imgs, targets = list(zip(*batch))
+        imgs, targets = list(zip(*batch))
         # Remove empty placeholder targets
         targets = [boxes for boxes in targets if boxes is not None]
         # Add sample index to targets
@@ -101,7 +102,7 @@ class Yolov2Dataset(Dataset):
         # Resize images to input shape
         imgs = torch.stack([resize(img, self.img_size) for img in imgs])
         self.batch_count += 1
-        return paths, imgs, targets
+        return imgs, targets
 
     def __len__(self):
         return len(self.img_files)
