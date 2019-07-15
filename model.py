@@ -99,7 +99,7 @@ class Model(BaseModel):
                 self.optimizer.zero_grad()
                 self.optimizer.step()
                 log_train_progress(epoch, options.epochs, batch_i, len(train_dataloader), start_time,
-                                   self.module_list[-1].metrics, self.logger)
+                                   self.module_list[-1][0].metrics, self.logger)
 
             if epoch % options.eval_interval == options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
