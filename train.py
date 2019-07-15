@@ -12,15 +12,23 @@ if __name__ == "__main__":
     if options.debug:
         pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
 
-    dataset = Yolov2Dataset(options, training=True, multiscale=options.multiscale)
-    dataloader = DataLoader(
-        dataset,
+    train_dataset = Yolov2Dataset(options, training=True, multiscale=options.multiscale)
+    eval_dataset = Yolov2Dataset(options, training=False)
+    train_dataloader = DataLoader(
+        train_dataset,
         batch_size=options.batch_size,
         shuffle=False,
         num_workers=0,
-        collate_fn=dataset.collate_fn
+        collate_fn=train_dataset.collate_fn
+    )
+    eval_dataloader = DataLoader(
+        eval_dataset,
+        batch_size=options.batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=eval_dataset.collate_fn
     )
 
     model = Model(options, logger)
     model.load_weights(options.weights_path)
-    model.train(dataloader)
+    model.train(options, train_dataloader, eval_dataloader)

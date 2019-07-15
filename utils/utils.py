@@ -1,6 +1,12 @@
 import argparse
 import os, sys, time
 import torch
+import numpy as np
+from terminaltables import AsciiTable
+import time
+import datetime
+
+from computation import ap_per_class
 
 
 class Options():
@@ -21,6 +27,7 @@ class Options():
         parser.add_argument('--gpu', type=str, default='2', help='gpu id.')
         parser.add_argument("--n_cpu", type=int, default=8,
                                  help="number of cpu threads to use during batch generation")
+        parser.add_argument("--eval_interval", type=int, default=1, help="interval evaluations on validation set")
         parser.add_argument("--use_cuda", action='store_false', default=True,
                                  help="use cuda device or not")
         parser.add_argument("--debug", action='store_true', default=False,
@@ -61,3 +68,25 @@ class Logger(object):
         ISOTIMEFORMAT = '%Y-%m-%d %X'
         string = '[{}]'.format(time.strftime(ISOTIMEFORMAT, time.localtime(time.time())))
         return string
+
+def log_train_progress(epoch, total_epochs, batch_i, total_batch, start_time, metrics, logger):
+    log_str = "\n---- [Epoch %d/%d, Batch %d/%d] ----\n" % (epoch, total_epochs, batch_i, total_batch)
+    metric_table = [["Metrics", "Region Layer"]]
+    formats = {m: "%.6f" for m in metrics}
+    formats["grid_size"] = "%2d"
+    formats["cls_acc"] = "%.2f%%"
+    for i, metric in enumerate(metrics):
+        row_metrics = formats[metric] % metrics.get(metric, 0)
+        metric_table += [[metric, row_metrics]]
+    log_str += AsciiTable(metric_table).table
+
+    # Determine approximate time left for epoch
+    epoch_batches_left = total_batch - (batch_i + 1)
+    time_left = datetime.timedelta(seconds=epoch_batches_left * (time.time() - start_time) / (batch_i + 1))
+    log_str += f"\n---- ETA {time_left}"
+    logger.print_log(log_str, write_file=True)
+
+def show_eval_result(metrics, labels, logger):
+    true_positives, pred_conf, pred_labels = [np.concatenate(x, 0) for x in list(zip(*metrics))]
+    precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_conf, pred_labels, labels)
+    logger.print_log(f"mAP: {AP.mean()}")

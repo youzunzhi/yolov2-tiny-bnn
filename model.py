@@ -4,8 +4,11 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
 import tqdm
+import time
+
 from modules import *
 from utils.computation import *
+from utils.utils import log_train_progress, show_eval_result
 
 class BaseModel(object):
     def set_train_state(self, *names):
@@ -54,9 +57,9 @@ class Model(BaseModel):
         self.hyper_parameters, self.module_list = self.get_module_list()
 
         self.optimizer = optim.SGD(self.module_list.parameters(),
-                                   lr=self.hyper_parameters['learning_rate'],
-                                   momentum=self.hyper_parameters['momentum'],
-                                   weight_decay=self.hyper_parameters['decay'])
+                                   lr=float(self.hyper_parameters['learning_rate']),
+                                   momentum=float(self.hyper_parameters['momentum']),
+                                   weight_decay=float(self.hyper_parameters['decay']))
 
     def forward(self, inputs, targets=None):
         outputs = None
@@ -84,18 +87,23 @@ class Model(BaseModel):
             outputs = outputs.detach().cpu()
             return outputs
 
-    def train(self, options, dataloader):
+    def train(self, options, train_dataloader, eval_dataloader):
         for epoch in range(options.epochs):
+            start_time = time.time()
             self.set_train_state()
-            for batch_i, (imgs, targets) in enumerate(dataloader):
+            for batch_i, (imgs, targets) in enumerate(train_dataloader):
                 imgs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
                 outputs, loss = self.forward(imgs, targets)
                 loss.backward()
                 self.optimizer.zero_grad()
                 self.optimizer.step()
+                log_train_progress(epoch, options.epochs, batch_i, len(train_dataloader), start_time,
+                                   self.module_list[-1].metrics, self.logger)
 
-
+            if epoch % options.eval_interval == options.eval_interval - 1:
+                self.logger.print_log("\n---- Evaluating Model ----")
+                self.eval(eval_dataloader)
 
     def eval(self, dataloader):
         self.set_eval_state()
@@ -108,7 +116,7 @@ class Model(BaseModel):
             targets[:, 2:] = xywh2xyxy(targets[:, 2:])
             targets[:, 2:] *= int(self.hyper_parameters['width'])
 
-            outputs = self.forward(imgs, training=False)  # B,845,25
+            outputs = self.forward(imgs)  # B,845,25
             predictions = non_max_suppression(outputs)
             metrics += get_batch_metrics(predictions, targets)
 

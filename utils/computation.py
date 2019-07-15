@@ -88,6 +88,15 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return iou
 
 
+def bbox_wh_iou(wh1, wh2):
+    wh2 = wh2.t()
+    w1, h1 = wh1[0], wh1[1]
+    w2, h2 = wh2[0], wh2[1]
+    inter_area = torch.min(w1, w2) * torch.min(h1, h2)
+    union_area = (w1 * h1 + 1e-16) + w2 * h2 - inter_area
+    return inter_area / union_area
+
+
 def get_batch_metrics(predictions, targets):
     iou_thresh = 0.5
     batch_metrics = []
@@ -125,12 +134,6 @@ def get_batch_metrics(predictions, targets):
                     detected_boxes += [box_index]
         batch_metrics.append([true_positives, pred_conf, pred_labels])
     return batch_metrics
-
-
-def show_eval_result(metrics, labels, logger):
-    true_positives, pred_conf, pred_labels = [np.concatenate(x, 0) for x in list(zip(*metrics))]
-    precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_conf, pred_labels, labels)
-    logger.print_log(f"mAP: {AP.mean()}")
 
 
 def ap_per_class(tp, conf, pred_cls, target_cls):
