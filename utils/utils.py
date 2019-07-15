@@ -6,7 +6,7 @@ from terminaltables import AsciiTable
 import time
 import datetime
 
-from computation import ap_per_class
+from utils.computation import ap_per_class
 
 
 class Options():
