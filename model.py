@@ -91,7 +91,7 @@ class Model(BaseModel):
         for epoch in range(options.epochs):
             start_time = time.time()
             self.set_train_state()
-            for batch_i, (imgs, targets) in enumerate(train_dataloader):
+            for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
                 imgs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
                 outputs, loss = self.forward(imgs, targets)
@@ -109,7 +109,7 @@ class Model(BaseModel):
         self.set_eval_state()
         metrics = []
         labels = []
-        for batch_i, (imgs, targets) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
+        for batch_i, (imgs, targets, img_path) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
             labels += targets[:, 1].tolist()
             imgs = Variable(imgs.type(torch.cuda.FloatTensor), requires_grad=False)
             # Rescale target
