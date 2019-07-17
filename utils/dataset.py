@@ -6,6 +6,7 @@ import torch
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 
 
 class Yolov2Dataset(Dataset):
@@ -28,6 +29,7 @@ class Yolov2Dataset(Dataset):
                 for path in self.img_files
             ]
 
+        self.batch_size = options.batch_size
         self.img_size = 416
         self.normalized_labels = True
         self.augment = training
@@ -86,10 +88,10 @@ class Yolov2Dataset(Dataset):
             if np.random.random() < 0.5:
                 img, targets = horizontal_flip(img, targets)
 
-        return img, targets
+        return img, targets, img_path
 
     def collate_fn(self, batch):
-        imgs, targets = list(zip(*batch))
+        imgs, targets, img_paths = list(zip(*batch))
         # Remove empty placeholder targets
         targets = [boxes for boxes in targets if boxes is not None]
         # Add sample index to targets
@@ -102,7 +104,7 @@ class Yolov2Dataset(Dataset):
         # Resize images to input shape
         imgs = torch.stack([resize(img, self.img_size) for img in imgs])
         self.batch_count += 1
-        return imgs, targets
+        return imgs, targets, img_paths
 
     def __len__(self):
         return len(self.img_files)
@@ -119,6 +121,15 @@ class Yolov2Dataset(Dataset):
             key, value = line.split('=')
             options[key.strip()] = value.strip()
         return options
+
+    def get_dataloader(self):
+        return DataLoader(
+                self,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=0,
+                collate_fn=self.collate_fn
+            )
 
 
 def pad_to_square(img, pad_value):
