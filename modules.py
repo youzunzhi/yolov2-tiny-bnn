@@ -74,8 +74,8 @@ class RegionLoss(nn.Module):
         )  # 8,5,H,W,25
 
         # Get outputs
-        x = prediction[..., 0]  # Center x # 8,5,H,W
-        y = prediction[..., 1]  # Center y # 8,5,H,W
+        x = torch.sigmoid(prediction[..., 0])  # Center x # 8,5,H,W
+        y = torch.sigmoid(prediction[..., 1])  # Center y # 8,5,H,W
         w = prediction[..., 2]  # Width # 8,5,H,W
         h = prediction[..., 3]  # Height # 8,5,H,W
         pred_conf = torch.sigmoid(prediction[..., 4])  # Conf # 8,5,H,W
@@ -89,8 +89,8 @@ class RegionLoss(nn.Module):
         anchor_w = FloatTensor(self.anchors).index_select(1, torch.LongTensor([0]).cuda()).view(1, self.num_anchors, 1, 1)
         anchor_h = FloatTensor(self.anchors).index_select(1, torch.LongTensor([1]).cuda()).view(1, self.num_anchors, 1, 1)
 
-        pred_boxes[..., 0] = torch.sigmoid(x.data) + grid_x
-        pred_boxes[..., 1] = torch.sigmoid(y.data) + grid_y
+        pred_boxes[..., 0] = x + grid_x
+        pred_boxes[..., 1] = y + grid_y
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
@@ -119,8 +119,8 @@ class RegionLoss(nn.Module):
             loss_y = self.coord_scale * nn.MSELoss()(y[obj_mask], ty[obj_mask])
             loss_w = self.coord_scale * nn.MSELoss()(w[obj_mask], tw[obj_mask])
             loss_h = self.coord_scale * nn.MSELoss()(h[obj_mask], th[obj_mask])
-            loss_conf_obj = nn.BCELoss()(pred_conf[obj_mask], tconf[obj_mask])
-            loss_conf_noobj = nn.BCELoss()(pred_conf[noobj_mask], tconf[noobj_mask])
+            loss_conf_obj = nn.MSELoss()(pred_conf[obj_mask], tconf[obj_mask])
+            loss_conf_noobj = nn.MSELoss()(pred_conf[noobj_mask], tconf[noobj_mask])
             loss_conf = self.object_scale * loss_conf_obj + self.noobject_scale * loss_conf_noobj
             loss_cls = self.class_scale * nn.BCELoss()(pred_cls[obj_mask], tcls[obj_mask])
             total_loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
@@ -180,7 +180,7 @@ class RegionLoss(nn.Module):
         gwh = target_boxes[:, 2:]
         # Get anchors with best iou
         ious = torch.stack([bbox_wh_iou(anchor, gwh) for anchor in anchors])
-        best_ious, best_n = ious.max(0)  # 65 # 65
+        best_ious, best_n = ious.max(0)
         # Separate target values
         b, target_labels = target[:, :2].long().t()
         gx, gy = gxy.t()
@@ -206,5 +206,5 @@ class RegionLoss(nn.Module):
         class_mask[b, best_n, gj, gi] = (pred_cls[b, best_n, gj, gi].argmax(-1) == target_labels).float()
         iou_scores[b, best_n, gj, gi] = bbox_iou(pred_boxes[b, best_n, gj, gi], target_boxes, x1y1x2y2=False)
 
-        tconf = obj_mask.float()
+        tconf = obj_mask.float() * iou_scores
         return iou_scores, class_mask, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf
