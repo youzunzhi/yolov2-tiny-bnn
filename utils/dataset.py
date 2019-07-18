@@ -32,6 +32,7 @@ class Yolov2Dataset(Dataset):
         self.batch_size = options.batch_size
         self.batch_count = 0
         self.img_size = 13 * 32
+        self.training = training
         self.multiscale = multiscale
         if multiscale:
             self.multiscale_interval = 10
@@ -93,7 +94,7 @@ class Yolov2Dataset(Dataset):
             boxes[:, 0] = i
         targets = torch.cat(targets, 0)
         # Selects new image size every tenth batch
-        if self.multiscale and self.batch_count % 10 == 0:
+        if self.training and self.multiscale and self.batch_count % 10 == 0:
             self.img_size = random.choice(range(self.min_scale, self.max_scale + 1, 32))
         # Resize images to input shape
         imgs = torch.stack([resize(img, self.img_size) for img in imgs])
