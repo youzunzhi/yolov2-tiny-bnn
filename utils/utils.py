@@ -10,18 +10,23 @@ from utils.computation import ap_per_class
 
 
 class Options():
-    def __init__(self):
+    def __init__(self, training):
         parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        # training options
-        parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
-        parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
-        parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
+        if training:
+            # training options
+            parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
+            parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
+
         # data and model
         parser.add_argument("--data_cfg", type=str, default="cfg/voc.data", help="path to data cfg file")
         parser.add_argument("--model_cfg", type=str, default="cfg/yolov2-tiny-voc.cfg",
                                  help="path to model cfg file")
         parser.add_argument("--weights_path", type=str, default="weights/yolov2-tiny-voc.weights",
                                  help="path to weights file")
+        # hyper parameters
+        parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
+        parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
+        parser.add_argument("--nms_thresh", type=float, default=0.4, help="the threshold of non-max suppresion algorithm")
         # other configs
         parser.add_argument('--log_path', type=str, default='./logs/', help='Folder to save checkpoints and log.')
         parser.add_argument('--gpu', type=str, default='2', help='gpu id.')

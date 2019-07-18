@@ -3,16 +3,13 @@ import numpy as np
 import tqdm
 
 
-def non_max_suppression(model_output):
+def non_max_suppression(model_output, conf_thresh, nms_thresh):
     """
     Removes model_output with lower object confidence score than 'conf_thresh' and performs
     Non-Maximum Suppression to further filter model_output.
     Returns detections with shape:
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
-
-    conf_thresh = 0.005
-    nms_thresh = 0.4
 
     model_output[..., :4] = xywh2xyxy(model_output[..., :4])  # 8, 845, 25
     nms_output = [None for _ in range(len(model_output))]
@@ -120,7 +117,7 @@ def get_batch_metrics(predictions, targets):
 
             for pred_i, (pred_box, pred_label) in enumerate(zip(pred_boxes, pred_labels)):
 
-                # If targets are found then break
+                # If targets are all found then break
                 if len(detected_boxes) == len(annotations):
                     break
 

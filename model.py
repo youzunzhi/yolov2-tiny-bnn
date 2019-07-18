@@ -52,6 +52,7 @@ class BaseModel(object):
 class Model(BaseModel):
     def __init__(self, options, logger):
         super(BaseModel, self).__init__()
+        self.options = options
         self.logger = logger
         self.modules_def = self.parse_model_cfg(options.model_cfg)
         self.hyper_parameters, self.module_list = self.get_module_list()
@@ -117,7 +118,7 @@ class Model(BaseModel):
             targets[:, 2:] *= int(self.hyper_parameters['width'])
 
             outputs = self.forward(imgs)  # B,845,25
-            predictions = non_max_suppression(outputs)
+            predictions = non_max_suppression(outputs, self.options.conf_thresh, self.options.nms_thresh)
             metrics += get_batch_metrics(predictions, targets)
 
         show_eval_result(metrics, labels, self.logger)

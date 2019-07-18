@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 
 class Yolov2Dataset(Dataset):
-    def __init__(self, options, training=False, multiscale=False):
+    def __init__(self, options, training, multiscale=True, seen=0):
         self.data_cfg = self.parse_data_cfg(options.data_cfg)
         if training:
             path = self.data_cfg["train"]
@@ -30,13 +30,8 @@ class Yolov2Dataset(Dataset):
             ]
 
         self.batch_size = options.batch_size
-        self.img_size = 416
-        self.normalized_labels = True
-        self.augment = training
+        self.seen = seen
         self.multiscale = multiscale
-        self.min_size = self.img_size - 3 * 32
-        self.max_size = self.img_size + 3 * 32
-        self.batch_count = 0
 
     def __getitem__(self, index):
         #  ----- Image -----
@@ -51,46 +46,39 @@ class Yolov2Dataset(Dataset):
             img = img.unsqueeze(0)
             img = img.expand((3, img.shape[1:]))
 
-        _, h, w = img.shape
-        h_factor, w_factor = (h, w) if self.normalized_labels else (1, 1)
+        _, img_height, img_width = img.shape
         # Pad to square resolution
         img, pad = pad_to_square(img, 0)
         _, padded_h, padded_w = img.shape
 
         # ----- Label -----
         label_path = self.label_files[index % len(self.img_files)].rstrip()
-        # import pydevd_pycharm
-        # pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
-        targets = None
-        if os.path.exists(label_path):
-            boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
-            # Extract coordinates for unpadded + unscaled image
-            x1 = w_factor * (boxes[:, 1] - boxes[:, 3] / 2)
-            y1 = h_factor * (boxes[:, 2] - boxes[:, 4] / 2)
-            x2 = w_factor * (boxes[:, 1] + boxes[:, 3] / 2)
-            y2 = h_factor * (boxes[:, 2] + boxes[:, 4] / 2)
-            # Adjust for added padding
-            x1 += pad[0]
-            y1 += pad[2]
-            x2 += pad[1]
-            y2 += pad[3]
-            # Returns (x, y, w, h)
-            boxes[:, 1] = ((x1 + x2) / 2) / padded_w
-            boxes[:, 2] = ((y1 + y2) / 2) / padded_h
-            boxes[:, 3] *= w_factor / padded_w
-            boxes[:, 4] *= h_factor / padded_h
+        assert os.path.exists(label_path), "labels don't exist"
+        boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
+        # Extract coordinates for unpadded + unscaled image
+        x1 = img_width * (boxes[:, 1] - boxes[:, 3] / 2)
+        y1 = img_height * (boxes[:, 2] - boxes[:, 4] / 2)
+        x2 = img_width * (boxes[:, 1] + boxes[:, 3] / 2)
+        y2 = img_height * (boxes[:, 2] + boxes[:, 4] / 2)
+        # Adjust for added padding
+        x1 += pad[0]
+        y1 += pad[2]
+        x2 += pad[1]
+        y2 += pad[3]
+        # Returns (x, y, w, h)
+        boxes[:, 1] = ((x1 + x2) / 2) / padded_w
+        boxes[:, 2] = ((y1 + y2) / 2) / padded_h
+        boxes[:, 3] *= img_width / padded_w
+        boxes[:, 4] *= img_height / padded_h
 
-            targets = torch.zeros((len(boxes), 6))
-            targets[:, 1:] = boxes
-
-        # Apply augmentations
-        if self.augment:
-            if np.random.random() < 0.5:
-                img, targets = horizontal_flip(img, targets)
+        targets = torch.zeros((len(boxes), 6))
+        targets[:, 1:] = boxes
 
         return img, targets, img_path
 
     def collate_fn(self, batch):
+        import pydevd_pycharm
+        pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
         imgs, targets, img_paths = list(zip(*batch))
         # Remove empty placeholder targets
         targets = [boxes for boxes in targets if boxes is not None]

@@ -4,7 +4,7 @@ from model import Model
 import pydevd_pycharm
 
 if __name__ == "__main__":
-    options = Options().options
+    options = Options(training=True).options
     logger = Logger(options.log_path)
     logger.print_options(options)
 
