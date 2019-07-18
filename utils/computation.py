@@ -100,7 +100,7 @@ def bbox_wh_iou(wh1, wh2):
 def get_batch_metrics(predictions, targets):
     iou_thresh = 0.5
     batch_metrics = []
-    for sample_i in range(len(predictions)):
+    for sample_i in range(len(predictions[0])):
 
         if predictions[sample_i] is None:
             continue
@@ -120,7 +120,7 @@ def get_batch_metrics(predictions, targets):
 
             for pred_i, (pred_box, pred_label) in enumerate(zip(pred_boxes, pred_labels)):
 
-                # If targets are found break
+                # If targets are found then break
                 if len(detected_boxes) == len(annotations):
                     break
 
@@ -133,6 +133,7 @@ def get_batch_metrics(predictions, targets):
                     true_positives[pred_i] = 1
                     detected_boxes += [box_index]
         batch_metrics.append([true_positives, pred_conf, pred_labels])
+
     return batch_metrics
 
 
