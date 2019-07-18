@@ -44,10 +44,8 @@ class MaxPoolStride1(nn.Module):
 
 class RegionLoss(nn.Module):
     """Region Loss layer"""
-    def __init__(self, module_def, hyper_parameters):
+    def __init__(self, module_def):
         super(RegionLoss, self).__init__()
-        assert hyper_parameters['width']==hyper_parameters['height'], "img width must equals to height"
-        self.img_size = int(hyper_parameters['width'])
 
         anchors = module_def['anchors'].split(',')
         self.anchors = [float(i) for i in anchors]
@@ -64,7 +62,6 @@ class RegionLoss(nn.Module):
         self.metrics = {}
 
     def forward(self, x, targets=None):
-
 
         FloatTensor = torch.cuda.FloatTensor
         num_samples = x.size(0)
@@ -97,7 +94,7 @@ class RegionLoss(nn.Module):
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
-        stride = int(self.img_size / grid_size)
+        stride = 32
         output = torch.cat(
             (
                 pred_boxes.view(num_samples, -1, 4) * stride,

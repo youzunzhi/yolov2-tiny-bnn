@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 
 class Yolov2Dataset(Dataset):
-    def __init__(self, options, training, multiscale=True, seen=0):
+    def __init__(self, options, training, multiscale=True):
         self.data_cfg = self.parse_data_cfg(options.data_cfg)
         if training:
             path = self.data_cfg["train"]
@@ -30,8 +30,13 @@ class Yolov2Dataset(Dataset):
             ]
 
         self.batch_size = options.batch_size
-        self.seen = seen
+        self.batch_count = 0
+        self.img_size = 13 * 32
         self.multiscale = multiscale
+        if multiscale:
+            self.multiscale_interval = 10
+            self.min_scale = 10 * 32
+            self.max_scale = 19 * 32
 
     def __getitem__(self, index):
         #  ----- Image -----
@@ -53,32 +58,33 @@ class Yolov2Dataset(Dataset):
 
         # ----- Label -----
         label_path = self.label_files[index % len(self.img_files)].rstrip()
-        assert os.path.exists(label_path), "labels don't exist"
-        boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
-        # Extract coordinates for unpadded + unscaled image
-        x1 = img_width * (boxes[:, 1] - boxes[:, 3] / 2)
-        y1 = img_height * (boxes[:, 2] - boxes[:, 4] / 2)
-        x2 = img_width * (boxes[:, 1] + boxes[:, 3] / 2)
-        y2 = img_height * (boxes[:, 2] + boxes[:, 4] / 2)
-        # Adjust for added padding
-        x1 += pad[0]
-        y1 += pad[2]
-        x2 += pad[1]
-        y2 += pad[3]
-        # Returns (x, y, w, h)
-        boxes[:, 1] = ((x1 + x2) / 2) / padded_w
-        boxes[:, 2] = ((y1 + y2) / 2) / padded_h
-        boxes[:, 3] *= img_width / padded_w
-        boxes[:, 4] *= img_height / padded_h
+        targets = None
+        assert os.path.exists(label_path), "label_path not exist:"+label_path
+        if os.path.exists(label_path):
+            boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
+            # Extract coordinates for unpadded + unscaled image
+            x1 = img_width * (boxes[:, 1] - boxes[:, 3] / 2)
+            y1 = img_height * (boxes[:, 2] - boxes[:, 4] / 2)
+            x2 = img_width * (boxes[:, 1] + boxes[:, 3] / 2)
+            y2 = img_height * (boxes[:, 2] + boxes[:, 4] / 2)
+            # Adjust for added padding
+            x1 += pad[0]
+            y1 += pad[2]
+            x2 += pad[1]
+            y2 += pad[3]
+            # Returns (x, y, w, h)
+            boxes[:, 1] = ((x1 + x2) / 2) / padded_w
+            boxes[:, 2] = ((y1 + y2) / 2) / padded_h
+            boxes[:, 3] *= img_width / padded_w
+            boxes[:, 4] *= img_height / padded_h
 
-        targets = torch.zeros((len(boxes), 6))
-        targets[:, 1:] = boxes
+            targets = torch.zeros((len(boxes), 6))
+            targets[:, 1:] = boxes
+
 
         return img, targets, img_path
 
     def collate_fn(self, batch):
-        import pydevd_pycharm
-        pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
         imgs, targets, img_paths = list(zip(*batch))
         # Remove empty placeholder targets
         targets = [boxes for boxes in targets if boxes is not None]
@@ -88,7 +94,7 @@ class Yolov2Dataset(Dataset):
         targets = torch.cat(targets, 0)
         # Selects new image size every tenth batch
         if self.multiscale and self.batch_count % 10 == 0:
-            self.img_size = random.choice(range(self.min_size, self.max_size + 1, 32))
+            self.img_size = random.choice(range(self.min_scale, self.max_scale + 1, 32))
         # Resize images to input shape
         imgs = torch.stack([resize(img, self.img_size) for img in imgs])
         self.batch_count += 1
