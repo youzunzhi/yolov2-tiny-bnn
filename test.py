@@ -14,7 +14,7 @@ if __name__ == "__main__":
     dataset = Yolov2Dataset(options, training=False)
     dataloader = DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=options.batch_size,
         shuffle=False,
         num_workers=0,
         collate_fn=dataset.collate_fn
