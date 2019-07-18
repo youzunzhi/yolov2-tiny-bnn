@@ -100,7 +100,7 @@ def bbox_wh_iou(wh1, wh2):
 def get_batch_metrics(predictions, targets):
     iou_thresh = 0.5
     batch_metrics = []
-    for sample_i in range(len(predictions[0])):
+    for sample_i in range(len(predictions)):
 
         if predictions[sample_i] is None:
             continue

@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="06066195-3d0f-45fb-b27a-479172dd0dde" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/computation.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/computation.py" afterDir="false" />
-    </list>
+    <list default="true" id="06066195-3d0f-45fb-b27a-479172dd0dde" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,8 +13,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="300">
-              <caret line="24" selection-start-line="24" selection-end-line="24" />
+            <state relative-caret-position="135">
+              <caret line="13" selection-start-line="13" selection-end-line="13" />
             </state>
           </provider>
         </entry>
@@ -49,8 +46,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="587">
-              <caret line="119" column="23" selection-start-line="119" selection-start-column="12" selection-end-line="119" selection-end-column="23" />
+            <state relative-caret-position="602">
+              <caret line="120" selection-start-line="120" selection-end-line="120" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -61,8 +58,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/utils/computation.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="154">
-              <caret line="98" lean-forward="true" selection-start-line="98" selection-end-line="98" />
+            <state relative-caret-position="180">
+              <caret line="107" column="18" selection-start-line="107" selection-start-column="8" selection-end-line="107" selection-end-column="18" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -273,7 +270,7 @@
       <workItem from="1563004580628" duration="2660000" />
       <workItem from="1563008102753" duration="43187000" />
       <workItem from="1563245009505" duration="8282000" />
-      <workItem from="1563354004514" duration="13146000" />
+      <workItem from="1563354004514" duration="13409000" />
     </task>
     <task id="LOCAL-00001" summary="finish test">
       <created>1563159894778</created>
@@ -324,11 +321,18 @@
       <option name="project" value="LOCAL" />
       <updated>1563387200529</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="debug">
+      <created>1563427591984</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1563427591984</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="68775000" />
+    <option name="totallyTimeSpent" value="69038000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1920" height="1080" extended-state="0" />
@@ -388,10 +392,10 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="finish test" />
     <MESSAGE value="update" />
-    <MESSAGE value="debug" />
     <MESSAGE value="modify dataset.__get_item__() for debug" />
     <MESSAGE value="fix bug for &quot;modify dataset.__get_item__() for debug&quot;" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix bug for &quot;modify dataset.__get_item__() for debug&quot;" />
+    <MESSAGE value="debug" />
+    <option name="LAST_COMMIT_MESSAGE" value="debug" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -502,15 +506,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="300">
-          <caret line="24" selection-start-line="24" selection-end-line="24" />
+        <state relative-caret-position="135">
+          <caret line="13" selection-start-line="13" selection-end-line="13" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="587">
-          <caret line="119" column="23" selection-start-line="119" selection-start-column="12" selection-end-line="119" selection-end-column="23" />
+        <state relative-caret-position="602">
+          <caret line="120" selection-start-line="120" selection-end-line="120" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
@@ -519,8 +523,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/utils/computation.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="154">
-          <caret line="98" lean-forward="true" selection-start-line="98" selection-end-line="98" />
+        <state relative-caret-position="180">
+          <caret line="107" column="18" selection-start-line="107" selection-start-column="8" selection-end-line="107" selection-end-column="18" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
