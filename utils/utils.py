@@ -9,7 +9,7 @@ import datetime
 from utils.computation import ap_per_class
 
 
-class Options():
+class Options(object):
     def __init__(self, training):
         parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         if training:
