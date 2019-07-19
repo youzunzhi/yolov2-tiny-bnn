@@ -18,4 +18,4 @@ if __name__ == "__main__":
 
     model = Model(options, logger)
     model.load_weights(options.weights_file)
-    model.train(options, train_dataloader, eval_dataloader)
+    model.train(train_dataloader, eval_dataloader)

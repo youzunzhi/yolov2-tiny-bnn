@@ -58,7 +58,7 @@ class Model(BaseModel):
         self.hyper_parameters, self.module_list = self.get_module_list()
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
-        self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()
+        self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()+'.weights'
 
         self.optimizer = optim.SGD(self.module_list.parameters(),
                                    lr=float(self.hyper_parameters['learning_rate']),
@@ -93,8 +93,8 @@ class Model(BaseModel):
             outputs = outputs.detach().cpu()
             return outputs
 
-    def train(self, options, train_dataloader, eval_dataloader):
-        for epoch in range(options.epochs):
+    def train(self, train_dataloader, eval_dataloader):
+        for epoch in range(self.options.epochs):
             start_time = time.time()
             self.set_train_state()
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
@@ -106,14 +106,14 @@ class Model(BaseModel):
                 loss.backward()
                 self.optimizer.step()
 
-                log_train_progress(epoch, options.epochs, batch_i, len(train_dataloader), start_time,
+                log_train_progress(epoch, self.options.epochs, batch_i, len(train_dataloader), start_time,
                                    self.module_list[-1][0].metrics, self.logger)
 
-            if epoch % options.eval_interval == options.eval_interval - 1:
+            if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
                 self.eval(eval_dataloader)
 
-            if epoch % options.save_interval == options.save_interval - 1:
+            if epoch % self.options.save_interval == self.options.save_interval - 1:
                 self.logger.print_log("\n---- Saving Model ----")
                 fname = os.path.join(self.options.save_path, self.save_weights_fname)
                 self.save_weights(fname)
