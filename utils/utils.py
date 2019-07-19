@@ -16,6 +16,10 @@ class Options():
             # training options
             parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
             parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
+            parser.add_argument("--save_interval", type=int, default=10, help="interval of saving model weights")
+            parser.add_argument('--save_path', type=str, default='./weights/',
+                                help='Folder to save checkpoints and log.')
+            parser.add_argument("--eval_interval", type=int, default=1, help="interval of evaluations on validation set")
 
         # data and model
         parser.add_argument("--data_cfg", type=str, default="cfg/voc.data", help="path to data cfg file")
@@ -29,9 +33,6 @@ class Options():
         parser.add_argument("--nms_thresh", type=float, default=0.4, help="the threshold of non-max suppresion algorithm")
         # other configs
         parser.add_argument('--log_path', type=str, default='./logs/', help='Folder to save checkpoints and log.')
-        parser.add_argument("--eval_interval", type=int, default=1, help="interval of evaluations on validation set")
-        parser.add_argument("--save_interval", type=int, default=10, help="interval of saving model weights")
-        parser.add_argument('--save_path', type=str, default='./weights/', help='Folder to save checkpoints and log.')
         parser.add_argument('--gpu', type=str, default='2', help='gpu id.')
         parser.add_argument("--n_cpu", type=int, default=8,
                                  help="number of cpu threads to use during batch generation")
