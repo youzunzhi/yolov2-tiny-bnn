@@ -311,3 +311,5 @@ class Model(BaseModel):
                 conv_layer.weight.data.cpu().numpy().tofile(fp)
 
         fp.close()
+
+        self.logger.print_log('Saved weights to '+fname)
