@@ -126,8 +126,7 @@ def get_batch_metrics(predictions, targets):
                     continue
 
                 iou, box_index = bbox_iou(pred_box.unsqueeze(0), target_boxes).max(0)
-                assert pred_label == target_labels[box_index], "ha!"
-                if iou >= iou_thresh and box_index not in detected_boxes:
+                if iou >= iou_thresh and box_index not in detected_boxes and pred_label == target_labels[box_index]:
                     true_positives[pred_i] = 1
                     detected_boxes += [box_index]
         batch_metrics.append([true_positives, pred_conf, pred_labels])
