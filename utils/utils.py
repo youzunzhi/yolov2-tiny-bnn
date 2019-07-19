@@ -72,7 +72,7 @@ class Logger(object):
         print(string)
 
     def time_string(self):
-        ISOTIMEFORMAT = '%Y-%m-%d %X'
+        ISOTIMEFORMAT = '%Y-%m-%d-%X'
         string = '[{}]'.format(time.strftime(ISOTIMEFORMAT, time.localtime(time.time())))
         return string
 
