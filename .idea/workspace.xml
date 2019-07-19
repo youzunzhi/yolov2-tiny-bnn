@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="06066195-3d0f-45fb-b27a-479172dd0dde" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/dataset.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -25,8 +24,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/modules.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="233">
-              <caret line="107" selection-start-line="107" selection-end-line="107" />
+            <state relative-caret-position="1171">
+              <caret line="118" column="37" selection-start-line="118" selection-start-column="26" selection-end-line="118" selection-end-column="37" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -37,8 +36,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/train.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="300">
-              <caret line="20" column="11" selection-start-line="20" selection-start-column="11" selection-end-line="20" selection-end-column="11" />
+            <state relative-caret-position="240">
+              <caret line="16" selection-start-line="16" selection-end-line="16" />
               <folding>
                 <element signature="e#0#39#0" expanded="true" />
               </folding>
@@ -49,8 +48,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="525">
-              <caret line="117" column="30" lean-forward="true" selection-start-line="117" selection-start-column="30" selection-end-line="117" selection-end-column="65" />
+            <state relative-caret-position="575">
+              <caret line="101" column="27" selection-start-line="101" selection-start-column="27" selection-end-line="101" selection-end-column="27" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -61,8 +60,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/utils/computation.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="373">
-              <caret line="109" selection-start-line="109" selection-end-line="109" />
+            <state relative-caret-position="568">
+              <caret line="127" column="70" lean-forward="true" selection-start-line="127" selection-start-column="70" selection-end-line="127" selection-end-column="70" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -73,25 +72,41 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cfg/bnn-yolov2-tiny-voc.cfg">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1920">
-              <caret line="128" selection-start-line="128" selection-end-line="128" />
+            <state relative-caret-position="567">
+              <caret line="140" column="16" lean-forward="true" selection-start-line="140" selection-start-column="16" selection-end-line="140" selection-end-column="16" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="remoteDebugVfs:///opt/conda/lib/python3.6/site-packages/torch/nn/modules/module.py">
-          <provider selected="true" editor-type-id="py-remote-debug-stub-editor" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/utils/dataset.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="533">
-              <caret line="95" column="71" selection-start-line="95" selection-start-column="71" selection-end-line="95" selection-end-column="71" />
+            <state relative-caret-position="1224">
+              <caret line="149" selection-start-line="149" selection-end-line="150" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/utils/utils.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="465">
+              <caret line="31" column="55" selection-start-line="31" selection-start-column="55" selection-end-line="31" selection-end-column="55" />
+              <folding>
+                <element signature="e#0#15#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/cfg/yolov2-tiny-voc.cfg">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="572">
+              <caret line="133" column="13" lean-forward="true" selection-start-line="133" selection-start-column="13" selection-end-line="133" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -166,13 +181,13 @@
         <option value="$PROJECT_DIR$/test.py" />
         <option value="$PROJECT_DIR$/train.py" />
         <option value="$PROJECT_DIR$/utils/utils.py" />
-        <option value="$PROJECT_DIR$/modules.py" />
-        <option value="$PROJECT_DIR$/model.py" />
         <option value="$PROJECT_DIR$/utils/dataset.py" />
+        <option value="$PROJECT_DIR$/model.py" />
+        <option value="$PROJECT_DIR$/modules.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" fullScreen="true">
+  <component name="ProjectFrameBounds" extendedState="6" fullScreen="true">
     <option name="width" value="1920" />
     <option name="height" value="1080" />
   </component>
@@ -262,7 +277,7 @@
       <workItem from="1563008102753" duration="43187000" />
       <workItem from="1563245009505" duration="8282000" />
       <workItem from="1563354004514" duration="26748000" />
-      <workItem from="1563456198064" duration="548000" />
+      <workItem from="1563456198064" duration="9077000" />
     </task>
     <task id="LOCAL-00001" summary="finish test">
       <created>1563159894778</created>
@@ -355,14 +370,35 @@
       <option name="project" value="LOCAL" />
       <updated>1563452872145</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="debug multiscale testing">
+      <created>1563456783401</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1563456783401</updated>
+    </task>
+    <task id="LOCAL-00015" summary="debug region loss!">
+      <created>1563462992858</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1563462992858</updated>
+    </task>
+    <task id="LOCAL-00016" summary="12800!">
+      <created>1563466830310</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1563466830310</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="82925000" />
+    <option name="totallyTimeSpent" value="91454000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1920" height="1080" extended-state="0" />
+    <frame x="0" y="0" width="1920" height="1080" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.12140575" />
@@ -435,18 +471,10 @@
     <MESSAGE value="debug" />
     <MESSAGE value="dataset debugging" />
     <MESSAGE value="debug stride" />
-    <option name="LAST_COMMIT_MESSAGE" value="debug stride" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/modules.py</url>
-          <line>96</line>
-          <option name="timeStamp" value="10" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+    <MESSAGE value="debug multiscale testing" />
+    <MESSAGE value="debug region loss!" />
+    <MESSAGE value="12800!" />
+    <option name="LAST_COMMIT_MESSAGE" value="12800!" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/parse_option.py" />
@@ -485,30 +513,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/utils/utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="360">
-          <caret line="24" column="19" selection-start-line="24" selection-start-column="19" selection-end-line="24" selection-end-column="19" />
-          <folding>
-            <element signature="e#0#15#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/cfg/yolov2-tiny-voc.cfg">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="668">
-          <caret line="124" column="8" lean-forward="true" selection-start-line="124" selection-start-column="8" selection-end-line="124" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/cfg/bnn-yolov2-tiny-voc.cfg">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1920">
-          <caret line="128" selection-start-line="128" selection-end-line="128" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/test.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="135">
@@ -516,53 +520,77 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/train.py">
+    <entry file="file://$PROJECT_DIR$/utils/dataset.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="300">
-          <caret line="20" column="11" selection-start-line="20" selection-start-column="11" selection-end-line="20" selection-end-column="11" />
+        <state relative-caret-position="1224">
+          <caret line="149" selection-start-line="149" selection-end-line="150" />
           <folding>
-            <element signature="e#0#39#0" expanded="true" />
+            <element signature="e#0#9#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/modules.py">
+    <entry file="file://$PROJECT_DIR$/utils/utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="233">
-          <caret line="107" selection-start-line="107" selection-end-line="107" />
+        <state relative-caret-position="465">
+          <caret line="31" column="55" selection-start-line="31" selection-start-column="55" selection-end-line="31" selection-end-column="55" />
           <folding>
-            <element signature="e#0#12#0" expanded="true" />
+            <element signature="e#0#15#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/utils/computation.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="373">
-          <caret line="109" selection-start-line="109" selection-end-line="109" />
+        <state relative-caret-position="568">
+          <caret line="127" column="70" lean-forward="true" selection-start-line="127" selection-start-column="70" selection-end-line="127" selection-end-column="70" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="240">
+          <caret line="16" selection-start-line="16" selection-end-line="16" />
+          <folding>
+            <element signature="e#0#39#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="525">
-          <caret line="117" column="30" lean-forward="true" selection-start-line="117" selection-start-column="30" selection-end-line="117" selection-end-column="65" />
+        <state relative-caret-position="575">
+          <caret line="101" column="27" selection-start-line="101" selection-start-column="27" selection-end-line="101" selection-end-column="27" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/utils/dataset.py">
+    <entry file="file://$PROJECT_DIR$/modules.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="533">
-          <caret line="95" column="71" selection-start-line="95" selection-start-column="71" selection-end-line="95" selection-end-column="71" />
+        <state relative-caret-position="1171">
+          <caret line="118" column="37" selection-start-line="118" selection-start-column="26" selection-end-line="118" selection-end-column="37" />
           <folding>
-            <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#0#12#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cfg/bnn-yolov2-tiny-voc.cfg">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="567">
+          <caret line="140" column="16" lean-forward="true" selection-start-line="140" selection-start-column="16" selection-end-line="140" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cfg/yolov2-tiny-voc.cfg">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="133" column="13" lean-forward="true" selection-start-line="133" selection-start-column="13" selection-end-line="133" selection-end-column="13" />
         </state>
       </provider>
     </entry>
