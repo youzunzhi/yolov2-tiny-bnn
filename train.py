@@ -17,5 +17,5 @@ if __name__ == "__main__":
     eval_dataloader = eval_dataset.get_dataloader()
 
     model = Model(options, logger)
-    model.load_weights(options.weights_path)
+    model.load_weights(options.weights_file)
     model.train(options, train_dataloader, eval_dataloader)

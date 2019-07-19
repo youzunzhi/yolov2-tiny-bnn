@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
 import tqdm
-import time
+import os, time
 
 from modules import *
 from utils.computation import *
@@ -56,6 +56,9 @@ class Model(BaseModel):
         self.logger = logger
         self.modules_def = self.parse_model_cfg(options.model_cfg)
         self.hyper_parameters, self.module_list = self.get_module_list()
+        self.seen = 0
+        self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
+        self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()
 
         self.optimizer = optim.SGD(self.module_list.parameters(),
                                    lr=float(self.hyper_parameters['learning_rate']),
@@ -96,8 +99,8 @@ class Model(BaseModel):
                 imgs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
                 outputs, loss = self.forward(imgs, targets)
-                loss.backward()
                 self.optimizer.zero_grad()
+                loss.backward()
                 self.optimizer.step()
                 log_train_progress(epoch, options.epochs, batch_i, len(train_dataloader), start_time,
                                    self.module_list[-1][0].metrics, self.logger)
@@ -105,6 +108,11 @@ class Model(BaseModel):
             if epoch % options.eval_interval == options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
                 self.eval(eval_dataloader)
+
+            if epoch % options.save_interval == options.save_interval - 1:
+                self.logger.print_log("\n---- Saving Model ----")
+                fname = os.path.join(self.options.save_path, self.save_weights_fname)
+                self.save_weights(fname)
 
     def eval(self, dataloader):
         self.set_eval_state()
@@ -218,17 +226,19 @@ class Model(BaseModel):
 
         return hyper_parameters, module_list
 
-    def load_weights(self, weights_path):
-        """Parses and loads the weights stored in 'weights_path'"""
+    def load_weights(self, weights_file):
+        """Parses and loads the weights stored in 'weights_file'"""
 
         # Open the weights file
-        with open(weights_path, "rb") as f:
+        with open(weights_file, "rb") as f:
             header = np.fromfile(f, dtype=np.int32, count=4)  # First four are header values
+            self.header_info = header  # Needed to write header when saving weights
+            self.seen = header[3]  # number of images seen during training
             weights = np.fromfile(f, dtype=np.float32)  # The rest are weights
 
         # Establish cutoff for loading backbone weights
         cutoff = None
-        if "darknet53.conv.74" in weights_path:
+        if "darknet53.conv.74" in weights_file:
             cutoff = 75
 
         ptr = 0
@@ -268,3 +278,32 @@ class Model(BaseModel):
                 conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
                 conv_layer.weight.data.copy_(conv_w)
                 ptr += num_w
+
+    def save_weights(self, fname, cutoff=-1):
+        """
+        :param path: path of the new weights file
+        :param cutoff: save layers between 0 and cutoff (cutoff == -1 -> all save)
+        :return:
+        """
+        fp = open(fname, "wb")
+        self.header_info[3] = self.seen
+        self.header_info.tofile(fp)
+
+        # Iterate through layers
+        for i, (module_def, module) in enumerate(zip(self.modules_def[:cutoff], self.module_list[:cutoff])):
+            if module_def["type"] == "convolutional":
+                conv_layer = module[0]
+                # If batch norm, save bn first
+                if module_def["batch_normalize"]:
+                    bn_layer = module[1]
+                    bn_layer.bias.data.cpu().numpy().tofile(fp)
+                    bn_layer.weight.data.cpu().numpy().tofile(fp)
+                    bn_layer.running_mean.data.cpu().numpy().tofile(fp)
+                    bn_layer.running_var.data.cpu().numpy().tofile(fp)
+                # save conv bias
+                else:
+                    conv_layer.bias.data.cpu().numpy().tofile(fp)
+                # save conv weights
+                conv_layer.weight.data.cpu().numpy().tofile(fp)
+
+        fp.close()
