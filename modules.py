@@ -58,11 +58,10 @@ class RegionLoss(nn.Module):
         self.class_scale = float(module_def['class_scale'])
         self.coord_scale = float(module_def['coord_scale'])
         self.thresh = float(module_def['thresh'])
-        self.seen = 0
 
         self.metrics = {}
 
-    def forward(self, x, targets=None):
+    def forward(self, x, seen, targets=None):
 
         FloatTensor = torch.cuda.FloatTensor
         num_samples = x.size(0)
@@ -111,9 +110,10 @@ class RegionLoss(nn.Module):
             iou_scores, class_mask, coord_mask, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf = self.build_targets(
                 pred_boxes=pred_boxes,
                 pred_cls=pred_cls,
-                target=targets,
+                targets=targets,
                 anchors=self.anchors,
                 ignore_thres=self.thresh,
+                seen=seen
             )
 
             loss_x = self.coord_scale * nn.MSELoss()(x[coord_mask], tx[coord_mask])
@@ -151,11 +151,9 @@ class RegionLoss(nn.Module):
                 "grid_size": grid_size,
             }
 
-            self.seen += num_samples
-
             return output, total_loss
 
-    def build_targets(self, pred_boxes, pred_cls, target, anchors, ignore_thres):
+    def build_targets(self, pred_boxes, pred_cls, targets, anchors, ignore_thres, seen):
 
         ByteTensor = torch.cuda.ByteTensor
         FloatTensor = torch.cuda.FloatTensor
@@ -179,20 +177,20 @@ class RegionLoss(nn.Module):
         tcls = FloatTensor(nB, nA, nG, nG, nC).fill_(0)
 
         # if iter < 12800, learn anchor box
-        if self.seen < 12800:
+        if seen < 12800:
             tx.fill_(0.5)
             ty.fill_(0.5)
             coord_mask.fill_(1)
 
         # Convert to position relative to box
-        target_boxes = target[:, 2:6] * nG
+        target_boxes = targets[:, 2:6] * nG
         gxy = target_boxes[:, :2]
         gwh = target_boxes[:, 2:]
         # Get anchors with best iou
         ious = torch.stack([bbox_wh_iou(anchor, gwh) for anchor in anchors])
         best_ious, best_n = ious.max(0)
         # Separate target values
-        b, target_labels = target[:, :2].long().t()
+        b, target_labels = targets[:, :2].long().t()
         gx, gy = gxy.t()
         gw, gh = gwh.t()
         gi, gj = gxy.long().t()

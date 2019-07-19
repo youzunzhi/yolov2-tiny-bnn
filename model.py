@@ -73,8 +73,9 @@ class Model(BaseModel):
                 if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
                     inputs = module(inputs)
                 elif module_def["type"] == "region":
-                    outputs, region_loss = module[0](inputs, targets)
+                    outputs, region_loss = module[0](inputs, self.seen, targets)
                     loss += region_loss
+                    self.seen += inputs.shape[0]
                 else:
                     print('unknown type %s' % (module_def['type']))
             outputs = outputs.detach().cpu()
@@ -85,7 +86,8 @@ class Model(BaseModel):
                     if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
                         inputs = module(inputs)
                     elif module_def["type"] == "region":
-                        outputs, _ = module[0](inputs)
+                        outputs, _ = module[0](inputs, self.seen)
+                        self.seen += inputs.shape[0]
                     else:
                         print('unknown type %s' % (module_def['type']))
             outputs = outputs.detach().cpu()
@@ -99,9 +101,11 @@ class Model(BaseModel):
                 imgs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
                 outputs, loss = self.forward(imgs, targets)
+
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+
                 log_train_progress(epoch, options.epochs, batch_i, len(train_dataloader), start_time,
                                    self.module_list[-1][0].metrics, self.logger)
 
