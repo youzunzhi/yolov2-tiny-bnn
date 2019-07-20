@@ -233,6 +233,8 @@ class Model(BaseModel):
     def load_weights(self, weights_file):
         """Parses and loads the weights stored in 'weights_file'"""
 
+        if not os.path.exists(weights_file):
+            self.logger.print_log(weights_file+' does not exist, no pretrained weights loaded.')
         # Open the weights file
         with open(weights_file, "rb") as f:
             header = np.fromfile(f, dtype=np.int32, count=4)  # First four are header values

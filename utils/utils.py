@@ -28,8 +28,8 @@ class Options(object):
         parser.add_argument("--weights_file", type=str, default="weights/yolov2-tiny-voc.weights",
                                  help="path to weights file")
         # hyper parameters
-        parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
-        parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
+        parser.add_argument("--batch_size", type=int, default=64, help="size of each image batch")
+        parser.add_argument("--conf_thresh", type=float, default=0, help="only keep detections with conf higher than conf_thresh")
         parser.add_argument("--nms_thresh", type=float, default=0.4, help="the threshold of non-max suppresion algorithm")
         # other configs
         parser.add_argument('--log_path', type=str, default='./logs/', help='Folder to save checkpoints and log.')
