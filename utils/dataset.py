@@ -120,9 +120,8 @@ class Yolov2Dataset(Dataset):
         if self.training and self.multiscale and self.batch_count % 10 == 0:
             self.img_size = random.choice(range(self.min_scale, self.max_scale + 1, 32))
         # Resize images to input shape
-        imgs = torch.stack([self.resize(img, img_path, self.img_size) for img, img_path in (imgs, img_paths)])
+        imgs = torch.stack([self.resize(img, img_path, self.img_size) for (img, img_path) in (imgs, img_paths)])
 
-        assert self.get_item_choice==0 or not self.training or not self.multiscale, "Not implemented"
         self.batch_count += 1
         return imgs, targets, img_paths
 
