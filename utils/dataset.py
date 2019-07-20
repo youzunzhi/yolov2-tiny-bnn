@@ -120,6 +120,9 @@ class Yolov2Dataset(Dataset):
         if self.get_item_choice==0:
             # Resize images to input shape
             imgs = torch.stack([resize(img, self.img_size) for img in imgs])
+        else:
+            imgs = torch.stack([img for img in imgs])
+
         assert self.get_item_choice==0 or not self.training or not self.multiscale, "Not implemented"
         self.batch_count += 1
         return imgs, targets, img_paths
