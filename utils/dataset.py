@@ -38,7 +38,7 @@ class Yolov2Dataset(Dataset):
             self.multiscale_interval = 10
             self.min_scale = 10 * 32
             self.max_scale = 19 * 32
-        self.get_item_choice = 1
+        self.get_item_choice = 1 # 0 for erik, 1 for marvis
 
 
     def __getitem__(self, index):
@@ -46,9 +46,11 @@ class Yolov2Dataset(Dataset):
         return get_item_ways[self.get_item_choice](index)
 
     def get_item_marvis(self, index):
+        """
+        marvis' way to get item: resize directly(by PIL.Image) in collate_fn
+        """
         img_path = self.img_files[index % len(self.img_files)].rstrip()
         img = Image.open(img_path).convert('RGB')
-        img = img.resize((self.img_size, self.img_size))
         img = transforms.ToTensor()(img)
 
         label_path = self.label_files[index % len(self.img_files)].rstrip()
@@ -60,7 +62,7 @@ class Yolov2Dataset(Dataset):
 
     def get_item_erik(self, index):
         """
-        erik's way to get item: pad to square
+        erik's way to get item: pad to square, then resize it in collate_fn
         """
         #  ----- Image -----
         img_path = self.img_files[index % len(self.img_files)].rstrip()
@@ -117,11 +119,8 @@ class Yolov2Dataset(Dataset):
         # Selects new image size every tenth batch
         if self.training and self.multiscale and self.batch_count % 10 == 0:
             self.img_size = random.choice(range(self.min_scale, self.max_scale + 1, 32))
-        if self.get_item_choice==0:
-            # Resize images to input shape
-            imgs = torch.stack([resize(img, self.img_size) for img in imgs])
-        else:
-            imgs = torch.stack([img for img in imgs])
+        # Resize images to input shape
+        imgs = torch.stack([self.resize(img, img_path, self.img_size) for img, img_path in (imgs, img_paths)])
 
         assert self.get_item_choice==0 or not self.training or not self.multiscale, "Not implemented"
         self.batch_count += 1
@@ -152,6 +151,15 @@ class Yolov2Dataset(Dataset):
                 collate_fn=self.collate_fn
             )
 
+    def resize(self, img, img_path, size):
+        if self.get_item_choice == 0:
+            img = F.interpolate(img.unsqueeze(0), size=size, mode="nearest").squeeze(0)
+        else:
+            img = Image.open(img_path).convert('RGB')
+            img = img.resize((self.img_size, self.img_size))
+            img = transforms.ToTensor()(img)
+        return img
+
 
 def pad_to_square(img, pad_value):
     c, h, w = img.shape
@@ -172,6 +180,4 @@ def horizontal_flip(images, targets):
     return images, targets
 
 
-def resize(image, size):
-    image = F.interpolate(image.unsqueeze(0), size=size, mode="nearest").squeeze(0)
-    return image
+
