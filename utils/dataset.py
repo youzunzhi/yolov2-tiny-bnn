@@ -38,8 +38,30 @@ class Yolov2Dataset(Dataset):
             self.multiscale_interval = 10
             self.min_scale = 10 * 32
             self.max_scale = 19 * 32
+        self.get_item_choice = 1
+
 
     def __getitem__(self, index):
+        get_item_ways = [self.get_item_erik, self.get_item_marvis]
+        return get_item_ways[self.get_item_choice](index)
+
+    def get_item_marvis(self, index):
+        img_path = self.img_files[index % len(self.img_files)].rstrip()
+        img = Image.open(img_path).convert('RGB')
+        img = img.resize((self.img_size, self.img_size))
+        img = transforms.ToTensor()(img)
+
+        label_path = self.label_files[index % len(self.img_files)].rstrip()
+        boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
+        targets = torch.zeros((len(boxes), 6))
+        targets[:, 1:] = boxes
+
+        return img, targets, img_path
+
+    def get_item_erik(self, index):
+        """
+        erik's way to get item: pad to square
+        """
         #  ----- Image -----
         img_path = self.img_files[index % len(self.img_files)].rstrip()
 
@@ -60,7 +82,7 @@ class Yolov2Dataset(Dataset):
         # ----- Label -----
         label_path = self.label_files[index % len(self.img_files)].rstrip()
         targets = None
-        assert os.path.exists(label_path), "label_path not exist:"+label_path
+        assert os.path.exists(label_path), "label_path not exist:" + label_path
         if os.path.exists(label_path):
             boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
             # Extract coordinates for unpadded + unscaled image
@@ -82,7 +104,6 @@ class Yolov2Dataset(Dataset):
             targets = torch.zeros((len(boxes), 6))
             targets[:, 1:] = boxes
 
-
         return img, targets, img_path
 
     def collate_fn(self, batch):
@@ -96,8 +117,10 @@ class Yolov2Dataset(Dataset):
         # Selects new image size every tenth batch
         if self.training and self.multiscale and self.batch_count % 10 == 0:
             self.img_size = random.choice(range(self.min_scale, self.max_scale + 1, 32))
-        # Resize images to input shape
-        imgs = torch.stack([resize(img, self.img_size) for img in imgs])
+        if self.get_item_choice==0:
+            # Resize images to input shape
+            imgs = torch.stack([resize(img, self.img_size) for img in imgs])
+        assert self.get_item_choice==0 or not self.training or not self.multiscale, "Not implemented"
         self.batch_count += 1
         return imgs, targets, img_paths
 
