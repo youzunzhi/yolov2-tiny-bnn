@@ -100,8 +100,8 @@ class Model(BaseModel):
             return outputs
 
     def train(self, train_dataloader, eval_dataloader):
-        total_epoch = self.max_batches // len(train_dataloader) + 1
-        for epoch in range(total_epoch):
+        total_epochs = self.max_batches // len(train_dataloader) + 1
+        for epoch in range(total_epochs):
             start_time = time.time()
             self.set_train_state()
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
@@ -113,7 +113,7 @@ class Model(BaseModel):
                 loss.backward()
                 self.optimizer.step()
 
-                log_train_progress(epoch, self.options.epochs, batch_i, len(train_dataloader), start_time,
+                log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), start_time,
                                    self.module_list[-1][0].metrics, self.logger)
 
                 self.processed_batch += 1
