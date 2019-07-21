@@ -240,11 +240,12 @@ class Model(BaseModel):
         return hyper_parameters, module_list
 
     def adjust_learning_rate(self):
-        for i in range(len(self.steps)-1, -1, -1):
-            if self.processed_batch < self.steps[i]:
+        self.learning_rate = float(self.hyper_parameters['learning_rate'])
+        for i in range(len(self.steps)):
+            if self.processed_batch >= self.steps[i]:
                 self.learning_rate *= self.scales[i]
+            else:
                 break
-
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.learning_rate / self.batch_size
 
