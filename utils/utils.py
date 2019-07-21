@@ -33,7 +33,6 @@ class Options(object):
                                  help="use remote debugger, make sure remote debugger is running")
         if training:
             # training options
-            parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
             parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
             parser.add_argument("--save_interval", type=int, default=100, help="interval of saving model weights")
             parser.add_argument('--save_path', type=str, default='./weights/',

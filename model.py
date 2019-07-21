@@ -59,7 +59,7 @@ class Model(BaseModel):
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
         self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()+'.weights'
-
+        self.max_batches = int(self.hyper_parameters['max_batches'])
         self.processed_batch = 0
         self.batch_size = self.options.batch_size
         self.learning_rate = float(self.hyper_parameters['learning_rate'])
@@ -100,7 +100,8 @@ class Model(BaseModel):
             return outputs
 
     def train(self, train_dataloader, eval_dataloader):
-        for epoch in range(self.options.epochs):
+        total_epoch = self.max_batches // len(train_dataloader) + 1
+        for epoch in range(total_epoch):
             start_time = time.time()
             self.set_train_state()
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
