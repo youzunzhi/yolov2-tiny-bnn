@@ -21,7 +21,6 @@ class Options(object):
                                  help="path to weights file")
         # hyper parameters
         parser.add_argument("--batch_size", type=int, default=64, help="size of each image batch")
-        parser.add_argument("--conf_thresh", type=float, default=0, help="only keep detections with conf higher than conf_thresh")
         parser.add_argument("--nms_thresh", type=float, default=0.4, help="the threshold of non-max suppresion algorithm")
         # other configs
         parser.add_argument('--log_path', type=str, default='./logs/', help='Folder to save checkpoints and log.')
@@ -41,6 +40,9 @@ class Options(object):
                                 help='Folder to save checkpoints and log.')
             parser.add_argument("--eval_interval", type=int, default=100, help="interval of evaluations on validation set")
             parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
+        else:
+            parser.add_argument("--conf_thresh", type=float, default=0,
+                                help="only keep detections with conf higher than conf_thresh")
 
         self.options = parser.parse_args()
         os.environ["CUDA_VISIBLE_DEVICES"] = self.options.gpu
