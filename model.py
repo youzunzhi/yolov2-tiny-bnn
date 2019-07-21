@@ -232,7 +232,6 @@ class Model(BaseModel):
 
     def load_weights(self, weights_file):
         """Parses and loads the weights stored in 'weights_file'"""
-
         if not os.path.exists(weights_file):
             self.logger.print_log(weights_file+' does not exist, no pretrained weights loaded.')
         # Open the weights file
@@ -246,6 +245,9 @@ class Model(BaseModel):
         cutoff = None
         if "darknet53.conv.74" in weights_file:
             cutoff = 75
+        if "darknet53.conv.74" in weights_file:
+            cutoff = 75
+
 
         ptr = 0
         for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
