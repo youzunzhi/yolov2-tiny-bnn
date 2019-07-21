@@ -62,9 +62,10 @@ class Model(BaseModel):
 
         self.processed_batch = 0
         self.batch_size = self.options.batch_size
-        self.learning_rate = self.hyper_parameters['learning_rate']
-        self.steps = self.hyper_parameters['steps']
-        self.scales = self.hyper_parameters['scales']
+        self.learning_rate = float(self.hyper_parameters['learning_rate'])
+        self.steps = [float(step) for step in self.hyper_parameters['steps'].split(',')]
+        self.scales = [float(scale) for scale in self.hyper_parameters['scales'].split(',')]
+
         self.optimizer = optim.SGD(self.module_list.parameters(),
                                    lr=self.learning_rate/self.batch_size,
                                    momentum=float(self.hyper_parameters['momentum']),
