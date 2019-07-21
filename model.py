@@ -60,8 +60,13 @@ class Model(BaseModel):
         self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
         self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()+'.weights'
 
+        self.processed_batch = 0
+        self.batch_size = self.options.batch_size
+        self.learning_rate = self.hyper_parameters['learning_rate']
+        self.steps = self.hyper_parameters['steps']
+        self.scales = self.hyper_parameters['scales']
         self.optimizer = optim.SGD(self.module_list.parameters(),
-                                   lr=float(self.hyper_parameters['learning_rate']),
+                                   lr=self.learning_rate/self.batch_size,
                                    momentum=float(self.hyper_parameters['momentum']),
                                    weight_decay=float(self.hyper_parameters['decay']))
 
@@ -108,6 +113,9 @@ class Model(BaseModel):
 
                 log_train_progress(epoch, self.options.epochs, batch_i, len(train_dataloader), start_time,
                                    self.module_list[-1][0].metrics, self.logger)
+
+                self.processed_batch += 1
+                self.adjust_learning_rate()
 
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
@@ -229,6 +237,14 @@ class Model(BaseModel):
             module_list.append(modules)
 
         return hyper_parameters, module_list
+
+    def adjust_learning_rate(self):
+        for i in range(len(self.steps), 0, -1):
+            if self.processed_batch < self.steps[i]:
+                self.learning_rate *= self.scales[i]
+
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.learning_rate / self.batch_size
 
     def load_weights(self, weights_file):
         """Parses and loads the weights stored in 'weights_file'"""

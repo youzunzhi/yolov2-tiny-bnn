@@ -12,14 +12,6 @@ from utils.computation import ap_per_class
 class Options(object):
     def __init__(self, training):
         parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        if training:
-            # training options
-            parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
-            parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
-            parser.add_argument("--save_interval", type=int, default=100, help="interval of saving model weights")
-            parser.add_argument('--save_path', type=str, default='./weights/',
-                                help='Folder to save checkpoints and log.')
-            parser.add_argument("--eval_interval", type=int, default=100, help="interval of evaluations on validation set")
 
         # data and model
         parser.add_argument("--data_cfg", type=str, default="cfg/voc.data", help="path to data cfg file")
@@ -40,6 +32,15 @@ class Options(object):
                                  help="use cuda device or not")
         parser.add_argument("--debug", action='store_true', default=False,
                                  help="use remote debugger, make sure remote debugger is running")
+        if training:
+            # training options
+            parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
+            parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
+            parser.add_argument("--save_interval", type=int, default=100, help="interval of saving model weights")
+            parser.add_argument('--save_path', type=str, default='./weights/',
+                                help='Folder to save checkpoints and log.')
+            parser.add_argument("--eval_interval", type=int, default=100, help="interval of evaluations on validation set")
+            parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
 
         self.options = parser.parse_args()
         os.environ["CUDA_VISIBLE_DEVICES"] = self.options.gpu

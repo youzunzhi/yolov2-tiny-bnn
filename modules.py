@@ -207,13 +207,14 @@ class RegionLoss(nn.Module):
         tx[b, best_n, gj, gi] = gx - gx.floor()
         ty[b, best_n, gj, gi] = gy - gy.floor()
         # Width and height
-        tw[b, best_n, gj, gi] = torch.log(gw / anchors[best_n][:, 0] + 1e-16)
-        th[b, best_n, gj, gi] = torch.log(gh / anchors[best_n][:, 1] + 1e-16)
+        tw[b, best_n, gj, gi] = torch.log(gw / anchors[best_n][:, 0])
+        th[b, best_n, gj, gi] = torch.log(gh / anchors[best_n][:, 1])
         # One-hot encoding of label
         tcls[b, best_n, gj, gi, target_labels] = 1
         # Compute label correctness and iou at best anchor
         class_mask[b, best_n, gj, gi] = (pred_cls[b, best_n, gj, gi].argmax(-1) == target_labels).float()
         iou_scores[b, best_n, gj, gi] = bbox_iou(pred_boxes[b, best_n, gj, gi], target_boxes, x1y1x2y2=False)
 
-        tconf = obj_mask.float() * iou_scores
+        tconf = obj_mask.float() * iou_scores # rescore
+        # tconf = obj_mask.float()
         return iou_scores, class_mask, coord_mask, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf
