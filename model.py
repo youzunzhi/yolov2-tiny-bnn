@@ -245,8 +245,8 @@ class Model(BaseModel):
         cutoff = None
         if "darknet53.conv.74" in weights_file:
             cutoff = 75
-        if "darknet53.conv.74" in weights_file:
-            cutoff = 75
+        if "darknet.weights" in weights_file:
+            cutoff = 15
 
 
         ptr = 0
