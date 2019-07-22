@@ -15,33 +15,26 @@ class Options(object):
 
         # data and model
         parser.add_argument("--data_cfg", type=str, default="cfg/voc.data", help="path to data cfg file")
-        parser.add_argument("--model_cfg", type=str, default="cfg/yolov2-tiny-voc.cfg",
-                                 help="path to model cfg file")
-        parser.add_argument("--weights_file", type=str, default="weights/yolov2-tiny-voc.weights",
-                                 help="path to weights file")
+        parser.add_argument("--model_cfg", type=str, default="cfg/yolov2-tiny-voc.cfg", help="path to model cfg file")
+        parser.add_argument("--weights_file", type=str, default="weights/yolov2-tiny-voc.weights", help="path to weights file")
         # hyper parameters
         parser.add_argument("--batch_size", type=int, default=64, help="size of each image batch")
         parser.add_argument("--nms_thresh", type=float, default=0.4, help="the threshold of non-max suppresion algorithm")
         # other configs
         parser.add_argument('--log_path', type=str, default='./logs/', help='Folder to save checkpoints and log.')
         parser.add_argument('--gpu', type=str, default='2', help='gpu id.')
-        parser.add_argument("--n_cpu", type=int, default=0,
-                                 help="number of cpu threads to use during batch generation")
-        parser.add_argument("--use_cuda", action='store_false', default=True,
-                                 help="use cuda device or not")
-        parser.add_argument("--debug", action='store_true', default=False,
-                                 help="use remote debugger, make sure remote debugger is running")
+        parser.add_argument("--n_cpu", type=int, default=0, help="number of cpu threads to use during batch generation")
+        parser.add_argument("--use_cuda", action='store_false', default=True, help="use cuda device or not")
+        parser.add_argument("--debug", action='store_true', default=False, help="use remote debugger, make sure remote debugger is running")
         if training:
-            # training options
+            parser.add_argument("--pretrain_model_cfg", type=str, default="cfg/darknet.cfg", help="path to pretrain model cfg file")
             parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
             parser.add_argument("--save_interval", type=int, default=100, help="interval of saving model weights")
-            parser.add_argument('--save_path', type=str, default='./weights/',
-                                help='Folder to save checkpoints and log.')
+            parser.add_argument('--save_path', type=str, default='./weights/', help='Folder to save checkpoints and log.')
             parser.add_argument("--eval_interval", type=int, default=100, help="interval of evaluations on validation set")
             parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
         else:
-            parser.add_argument("--conf_thresh", type=float, default=0,
-                                help="only keep detections with conf higher than conf_thresh")
+            parser.add_argument("--conf_thresh", type=float, default=0, help="only keep detections with conf higher than conf_thresh")
 
         self.options = parser.parse_args()
         os.environ["CUDA_VISIBLE_DEVICES"] = self.options.gpu
@@ -79,6 +72,7 @@ class Logger(object):
         string = '[{}]'.format(time.strftime(ISOTIMEFORMAT, time.localtime(time.time())))
         return string
 
+
 def log_train_progress(epoch, total_epochs, batch_i, total_batch, start_time, metrics, logger):
     log_str = "\n---- [Epoch %d/%d, Batch %d/%d] ----\n" % (epoch, total_epochs, batch_i, total_batch)
     metric_table = [["Metrics", "Region Layer"]]
@@ -95,6 +89,7 @@ def log_train_progress(epoch, total_epochs, batch_i, total_batch, start_time, me
     time_left = datetime.timedelta(seconds=epoch_batches_left * (time.time() - start_time) / (batch_i + 1))
     log_str += f"\n---- ETA {time_left}"
     logger.print_log(log_str, write_file=True)
+
 
 def show_eval_result(metrics, labels, logger):
     true_positives, pred_conf, pred_labels = [np.concatenate(x, 0) for x in list(zip(*metrics))]

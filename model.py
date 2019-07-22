@@ -266,16 +266,16 @@ class Model(BaseModel):
         with open(weights_file, "rb") as f:
             header = np.fromfile(f, dtype=np.int32, count=4)  # First four are header values
             self.header_info = header  # Needed to write header when saving weights
-            self.seen = header[3]  # number of images seen during training
+            if "darknet" in weights_file:
+                self.seen = 0
+            else:
+                self.seen = header[3]  # number of images seen during training
             weights = np.fromfile(f, dtype=np.float32)  # The rest are weights
 
         # Establish cutoff for loading backbone weights
         cutoff = None
-        if "darknet53.conv.74" in weights_file:
-            cutoff = 75
         if "darknet.weights" in weights_file:
             cutoff = 13
-
 
         ptr = 0
         for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
