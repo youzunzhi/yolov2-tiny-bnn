@@ -58,7 +58,7 @@ class Yolov2Dataset(Dataset):
         label_path = self.label_files[index % len(self.img_files)].rstrip()
         img = Image.open(img_path).convert('RGB')
         boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
-        img, flip, dx, dy, sx, sy = data_augmentation(img, boxes, self.jitter, self.hue, self.saturation, self.exposure)
+        img, boxes = data_augmentation(img, boxes, self.jitter, self.hue, self.saturation, self.exposure)
         img = transforms.ToTensor()(img)
         targets = torch.zeros((len(boxes), 6))
         targets[:, 1:] = boxes
