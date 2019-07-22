@@ -120,11 +120,12 @@ class RegionLoss(nn.Module):
             loss_y = self.coord_scale * nn.MSELoss()(y[coord_mask], ty[coord_mask])
             loss_w = self.coord_scale * nn.MSELoss()(w[coord_mask], tw[coord_mask])
             loss_h = self.coord_scale * nn.MSELoss()(h[coord_mask], th[coord_mask])
+            loss_coord = loss_x + loss_y + loss_w + loss_h
             loss_conf_obj = nn.MSELoss()(pred_conf[obj_mask], tconf[obj_mask])
             loss_conf_noobj = nn.MSELoss()(pred_conf[noobj_mask], tconf[noobj_mask])
             loss_conf = self.object_scale * loss_conf_obj + self.noobject_scale * loss_conf_noobj
             loss_cls = self.class_scale * nn.BCELoss()(pred_cls[obj_mask], tcls[obj_mask])
-            total_loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
+            total_loss = loss_coord + loss_conf + loss_cls
 
             # Metrics
             cls_acc = 100 * class_mask[obj_mask].mean()
@@ -140,6 +141,7 @@ class RegionLoss(nn.Module):
 
             self.metrics = {
                 "loss": total_loss.item(),
+                "coord": loss_coord.item(),
                 "conf": loss_conf.item(),
                 "cls": loss_cls.item(),
                 "cls_acc": cls_acc.item(),
