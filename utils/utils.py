@@ -25,7 +25,7 @@ class Options(object):
         # other configs
         parser.add_argument('--log_path', type=str, default='./logs/', help='Folder to save checkpoints and log.')
         parser.add_argument('--gpu', type=str, default='2', help='gpu id.')
-        parser.add_argument("--n_cpu", type=int, default=8,
+        parser.add_argument("--n_cpu", type=int, default=0,
                                  help="number of cpu threads to use during batch generation")
         parser.add_argument("--use_cuda", action='store_false', default=True,
                                  help="use cuda device or not")
