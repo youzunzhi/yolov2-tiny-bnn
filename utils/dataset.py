@@ -34,7 +34,7 @@ class Yolov2Dataset(Dataset):
         self.batch_count = 0
         self.img_size = 13 * 32
         self.training = training
-        self.multiscale = options.multiscale
+        self.multiscale = options.multiscale_training
         if self.multiscale:
             self.multiscale_interval = 10
             self.min_scale = 10 * 32
@@ -186,7 +186,7 @@ def horizontal_flip(images, targets):
 def data_augmentation(img, boxes, jitter, hue, saturation, exposure):
     """convert from darknet"""
 
-    # crop img according to jitter (load_data_region())
+    # --- crop img according to jitter ---
     origin_height = img.height
     origin_width = img.width
 
