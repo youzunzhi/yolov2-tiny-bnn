@@ -122,11 +122,19 @@ class Model(BaseModel):
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
                 self.eval(eval_dataloader)
-
             if epoch % self.options.save_interval == self.options.save_interval - 1:
                 self.logger.print_log("\n---- Saving Model ----")
                 fname = os.path.join(self.options.save_path, self.save_weights_fname)
                 self.save_weights(fname)
+
+        if total_epochs % self.options.eval_interval != self.options.eval_interval - 1:
+            self.logger.print_log("\n---- Evaluating Model ----")
+            self.eval(eval_dataloader)
+        if total_epochs % self.options.save_interval != self.options.save_interval - 1:
+            self.logger.print_log("\n---- Saving Model ----")
+            fname = os.path.join(self.options.save_path, self.save_weights_fname)
+            self.save_weights(fname)
+
 
     def eval(self, dataloader):
         self.set_eval_state()

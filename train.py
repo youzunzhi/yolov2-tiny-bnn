@@ -11,7 +11,7 @@ if __name__ == "__main__":
     if options.debug:
         pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
 
-    train_dataset = Yolov2Dataset(options, training=True, multiscale=options.multiscale_training)
+    train_dataset = Yolov2Dataset(options, training=True)
     eval_dataset = Yolov2Dataset(options, training=False)
     train_dataloader = train_dataset.get_dataloader()
     eval_dataloader = eval_dataset.get_dataloader()

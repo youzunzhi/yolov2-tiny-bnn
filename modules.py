@@ -203,10 +203,10 @@ class RegionLoss(nn.Module):
         for i, anchor_ious in enumerate(ious.t()):
             noobj_mask[b[i], anchor_ious > ignore_thres, gj[i], gi[i]] = 0
 
-        # Coordinates
+        # Target Coordinates
         tx[b, best_n, gj, gi] = gx - gx.floor()
         ty[b, best_n, gj, gi] = gy - gy.floor()
-        # Width and height
+        # Target Width and height
         tw[b, best_n, gj, gi] = torch.log(gw / anchors[best_n][:, 0])
         th[b, best_n, gj, gi] = torch.log(gh / anchors[best_n][:, 1])
         # One-hot encoding of label
