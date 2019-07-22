@@ -151,7 +151,7 @@ class Yolov2Dataset(Dataset):
                 self,
                 batch_size=self.batch_size,
                 shuffle=self.training,
-                num_workers=self.options,
+                num_workers=self.options.n_cpu,
                 collate_fn=self.collate_fn
             )
 
