@@ -132,26 +132,26 @@ class RegionLoss(nn.Module):
             cls_acc = 100 * class_mask[obj_mask].mean()
             conf_obj = pred_conf[obj_mask].mean()
             conf_noobj = pred_conf[noobj_mask].mean()
-            conf50 = (pred_conf > 0.5).float()
-            iou50 = (iou_scores > 0.5).float()
-            iou75 = (iou_scores > 0.75).float()
-            detected_mask = conf50 * class_mask * tconf
-            precision = torch.sum(iou50 * detected_mask) / (conf50.sum() + 1e-16)
-            recall50 = torch.sum(iou50 * detected_mask) / (obj_mask.sum() + 1e-16)
-            recall75 = torch.sum(iou75 * detected_mask) / (obj_mask.sum() + 1e-16)
+            # conf50 = (pred_conf > 0.5).float()
+            # iou50 = (iou_scores > 0.5).float()
+            # iou75 = (iou_scores > 0.75).float()
+            # detected_mask = conf50 * class_mask * tconf
+            # precision = torch.sum(iou50 * detected_mask) / (conf50.sum() + 1e-16)
+            # recall50 = torch.sum(iou50 * detected_mask) / (obj_mask.sum() + 1e-16)
+            # recall75 = torch.sum(iou75 * detected_mask) / (obj_mask.sum() + 1e-16)
 
             self.metrics = {
                 "loss": total_loss.item(),
                 "loss_coord": loss_coord.item(),
                 "loss_conf": loss_conf.item(),
                 "loss_cls": loss_cls.item(),
-                "avg_iou": iou_scores.mean(),
+                "avg_iou": iou_scores[obj_mask].mean(),
                 "conf_obj": conf_obj.item(),
                 "conf_noobj": conf_noobj.item(),
                 "cls_acc": cls_acc.item(),
-                "recall50": recall50.item(),
-                "recall75": recall75.item(),
-                "precision": precision.item(),
+                # "recall50": recall50.item(),
+                # "recall75": recall75.item(),
+                # "precision": precision.item(),
                 "grid_size": grid_size,
             }
 
