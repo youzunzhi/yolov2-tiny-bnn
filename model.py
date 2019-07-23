@@ -73,10 +73,11 @@ class Model(BaseModel):
                 self.learning_rate = 0.1
                 weights_file = 'no pretrain'
 
+            decay = float(self.hyper_parameters['decay'])
             self.optimizer = optim.SGD(self.module_list.parameters(),
                                        lr=self.learning_rate/self.batch_size,
                                        momentum=float(self.hyper_parameters['momentum']),
-                                       weight_decay=float(self.hyper_parameters['decay']))
+                                       weight_decay=decay*self.batch_size)
 
         self.load_weights(weights_file)
 
