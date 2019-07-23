@@ -116,15 +116,11 @@ class RegionLoss(nn.Module):
                 seen=seen
             )
 
-            # loss_x = self.coord_scale * nn.MSELoss()(x[coord_mask], tx[coord_mask])
-            # loss_y = self.coord_scale * nn.MSELoss()(y[coord_mask], ty[coord_mask])
-            # loss_w = self.coord_scale * nn.MSELoss()(w[coord_mask], tw[coord_mask])
-            # loss_h = self.coord_scale * nn.MSELoss()(h[coord_mask], th[coord_mask])
-            coord_mask = coord_mask_scale>0
-            loss_x = ((x[coord_mask]-tx[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
-            loss_y = ((y[coord_mask]-ty[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
-            loss_w = ((w[coord_mask]-tw[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
-            loss_h = ((h[coord_mask]-th[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
+            coord_mask = coord_mask_scale > 0
+            loss_x = ((x[coord_mask]-tx[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
+            loss_y = ((y[coord_mask]-ty[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
+            loss_w = ((w[coord_mask]-tw[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
+            loss_h = ((h[coord_mask]-th[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
             loss_coord = loss_x + loss_y + loss_w + loss_h
             loss_conf_obj = nn.MSELoss()(pred_conf[obj_mask], tconf[obj_mask])
             loss_conf_noobj = nn.MSELoss()(pred_conf[noobj_mask], tconf[noobj_mask])
@@ -146,15 +142,16 @@ class RegionLoss(nn.Module):
 
             self.metrics = {
                 "loss": total_loss.item(),
-                "coord": loss_coord.item(),
-                "conf": loss_conf.item(),
-                "cls": loss_cls.item(),
+                "loss_coord": loss_coord.item(),
+                "loss_conf": loss_conf.item(),
+                "loss_cls": loss_cls.item(),
+                "avg_iou": iou_scores.mean(),
+                "conf_obj": conf_obj.item(),
+                "conf_noobj": conf_noobj.item(),
                 "cls_acc": cls_acc.item(),
                 "recall50": recall50.item(),
                 "recall75": recall75.item(),
                 "precision": precision.item(),
-                "conf_obj": conf_obj.item(),
-                "conf_noobj": conf_noobj.item(),
                 "grid_size": grid_size,
             }
 
