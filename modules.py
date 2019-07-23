@@ -118,15 +118,15 @@ class RegionLoss(nn.Module):
             )
 
             coord_mask = coord_mask_scale > 0
-            loss_x = ((x[coord_mask]-tx[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
-            loss_y = ((y[coord_mask]-ty[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
-            loss_w = ((w[coord_mask]-tw[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
-            loss_h = ((h[coord_mask]-th[coord_mask])**2*coord_mask_scale[coord_mask]).sum()/coord_mask.sum() # scaled MSELoss
+            loss_x = ((x[coord_mask]-tx[coord_mask])**2*coord_mask_scale[coord_mask]).sum()  # scaled SSELoss
+            loss_y = ((y[coord_mask]-ty[coord_mask])**2*coord_mask_scale[coord_mask]).sum()  # scaled SSELoss
+            loss_w = ((w[coord_mask]-tw[coord_mask])**2*coord_mask_scale[coord_mask]).sum()  # scaled SSELoss
+            loss_h = ((h[coord_mask]-th[coord_mask])**2*coord_mask_scale[coord_mask]).sum()  # scaled SSELoss
             loss_coord = loss_x + loss_y + loss_w + loss_h
-            loss_conf_obj = nn.MSELoss()(pred_conf[obj_mask], tconf[obj_mask])
-            loss_conf_noobj = nn.MSELoss()(pred_conf[noobj_mask], tconf[noobj_mask])
+            loss_conf_obj = nn.MSELoss(reduction='sum')(pred_conf[obj_mask], tconf[obj_mask])
+            loss_conf_noobj = nn.MSELoss(reduction='sum')(pred_conf[noobj_mask], tconf[noobj_mask])
             loss_conf = self.object_scale * loss_conf_obj + self.noobject_scale * loss_conf_noobj
-            loss_cls = self.class_scale * nn.BCELoss()(pred_cls[obj_mask], tcls[obj_mask])
+            loss_cls = self.class_scale * nn.BCELoss(reduction='sum')(pred_cls[obj_mask], tcls[obj_mask])
             total_loss = loss_coord + loss_conf + loss_cls
 
             # Metrics
