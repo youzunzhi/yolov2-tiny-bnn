@@ -59,7 +59,6 @@ class Model(BaseModel):
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
         self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()+'.weights'
-        self.total_epochs = options.total_epochs
         self.batch_size = self.options.batch_size
         self.trained = not self.options.just_pretrained and not self.options.no_pretrained
         if self.trained:
