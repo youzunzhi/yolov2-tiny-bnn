@@ -94,7 +94,7 @@ class Model(BaseModel):
                     if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
                         inputs = module(inputs)
                     elif module_def["type"] == "region":
-                        outputs, _ = module[0](inputs, self.seen)
+                        outputs, _ = module[0](inputs, 0)
                         self.seen += inputs.shape[0]
                     else:
                         print('unknown type %s' % (module_def['type']))
