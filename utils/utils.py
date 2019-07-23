@@ -52,6 +52,7 @@ class Logger(object):
         self.file = open(os.path.join(save_path, 'log_{}.txt'.format(self.time_string())), 'w')
         self.print_log("python version : {}".format(sys.version.replace('\n', ' ')))
         self.print_log("torch  version : {}".format(torch.__version__))
+        self.print_variations()
 
     def print_options(self, options):
         self.print_log("")
@@ -71,6 +72,11 @@ class Logger(object):
             self.file.write("{}\n".format(string))
             self.file.flush()
         print(string)
+
+    def print_variations(self):
+        variation_dict = {"data_augmentation" : False,
+                          "object_scale": "noobj/obj"}
+        self.print_log(str(variation_dict))
 
     def time_string(self):
         ISOTIMEFORMAT = '%Y-%m-%d-%X'
