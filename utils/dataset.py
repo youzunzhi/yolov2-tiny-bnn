@@ -34,11 +34,12 @@ class Yolov2Dataset(Dataset):
         self.batch_count = 0
         self.img_size = 13 * 32
         self.training = training
-        self.multiscale = options.multiscale_training
-        if self.multiscale:
-            self.multiscale_interval = 10
-            self.min_scale = 10 * 32
-            self.max_scale = 19 * 32
+        if training:
+            self.multiscale = options.multiscale_training
+            if self.multiscale:
+                self.multiscale_interval = 10
+                self.min_scale = 10 * 32
+                self.max_scale = 19 * 32
         self.get_item_choice = 1 # 0 for erik, 1 for marvis
         # for data augmentation (could be bad implementation, should load from cfg but it's so much easier this way, guess we won't modify these cfgs)
         self.jitter = 0.2
