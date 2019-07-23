@@ -107,7 +107,7 @@ class RegionLoss(nn.Module):
         if targets is None:
             return output, 0
         else:
-            iou_scores, class_mask, coord_mask, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf = self.build_targets(
+            iou_scores, class_mask, coord_mask_scale, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf = self.build_targets(
                 pred_boxes=pred_boxes,
                 pred_cls=pred_cls,
                 targets=targets,
@@ -116,10 +116,15 @@ class RegionLoss(nn.Module):
                 seen=seen
             )
 
-            loss_x = self.coord_scale * nn.MSELoss()(x[coord_mask], tx[coord_mask])
-            loss_y = self.coord_scale * nn.MSELoss()(y[coord_mask], ty[coord_mask])
-            loss_w = self.coord_scale * nn.MSELoss()(w[coord_mask], tw[coord_mask])
-            loss_h = self.coord_scale * nn.MSELoss()(h[coord_mask], th[coord_mask])
+            # loss_x = self.coord_scale * nn.MSELoss()(x[coord_mask], tx[coord_mask])
+            # loss_y = self.coord_scale * nn.MSELoss()(y[coord_mask], ty[coord_mask])
+            # loss_w = self.coord_scale * nn.MSELoss()(w[coord_mask], tw[coord_mask])
+            # loss_h = self.coord_scale * nn.MSELoss()(h[coord_mask], th[coord_mask])
+            coord_mask = coord_mask_scale>0
+            loss_x = ((x[coord_mask]-tx[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
+            loss_y = ((y[coord_mask]-ty[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
+            loss_w = ((w[coord_mask]-tw[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
+            loss_h = ((h[coord_mask]-th[coord_mask])**2*coord_mask_scale).sum()/coord_mask.sum() # scaled MSELoss
             loss_coord = loss_x + loss_y + loss_w + loss_h
             loss_conf_obj = nn.MSELoss()(pred_conf[obj_mask], tconf[obj_mask])
             loss_conf_noobj = nn.MSELoss()(pred_conf[noobj_mask], tconf[noobj_mask])
@@ -167,7 +172,7 @@ class RegionLoss(nn.Module):
         anchors = FloatTensor(anchors)
 
         # Output tensors
-        coord_mask = ByteTensor(nB, nA, nG, nG).fill_(0)
+        coord_mask_scale = FloatTensor(nB, nA, nG, nG).fill_(0)
         obj_mask = ByteTensor(nB, nA, nG, nG).fill_(0)
         noobj_mask = ByteTensor(nB, nA, nG, nG).fill_(1)
         class_mask = FloatTensor(nB, nA, nG, nG).fill_(0)
@@ -182,7 +187,7 @@ class RegionLoss(nn.Module):
         if seen < 12800:
             tx.fill_(0.5)
             ty.fill_(0.5)
-            coord_mask.fill_(1)
+            coord_mask_scale.fill_(1)
 
         # Convert to position relative to box
         target_boxes = targets[:, 2:6] * nG
@@ -197,7 +202,7 @@ class RegionLoss(nn.Module):
         gw, gh = gwh.t()
         gi, gj = gxy.long().t()
         # Set masks
-        coord_mask[b, best_n, gj, gi] = 1
+        coord_mask_scale[b, best_n, gj, gi] = 2 - targets[:,4] * targets[:,5]
         obj_mask[b, best_n, gj, gi] = 1
         noobj_mask[b, best_n, gj, gi] = 0
 
@@ -219,4 +224,4 @@ class RegionLoss(nn.Module):
 
         tconf = obj_mask.float() * iou_scores # rescore
         # tconf = obj_mask.float()
-        return iou_scores, class_mask, coord_mask, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf
+        return iou_scores, class_mask, coord_mask_scale, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf
