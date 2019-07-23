@@ -123,11 +123,10 @@ class RegionLoss(nn.Module):
             loss_w = ((w[coord_mask]-tw[coord_mask])**2*coord_mask_scale[coord_mask]).sum()  # scaled SSELoss
             loss_h = ((h[coord_mask]-th[coord_mask])**2*coord_mask_scale[coord_mask]).sum()  # scaled SSELoss
             loss_coord = loss_x + loss_y + loss_w + loss_h
-            loss_conf_obj = nn.MSELoss(reduction='sum')(pred_conf[obj_mask], tconf[obj_mask])
-            loss_conf_noobj = nn.MSELoss(reduction='sum')(pred_conf[noobj_mask], tconf[noobj_mask])
-            loss_conf = self.object_scale * loss_conf_obj + self.noobject_scale * loss_conf_noobj
+            loss_conf_obj = nn.MSELoss(reduction='sum')(self.object_scale * pred_conf[obj_mask], self.object_scale * tconf[obj_mask])
+            loss_conf_noobj = nn.MSELoss(reduction='sum')(self.noobject_scale * pred_conf[noobj_mask], self.noobject_scale * tconf[noobj_mask])
             loss_cls = self.class_scale * nn.BCELoss(reduction='sum')(pred_cls[obj_mask], tcls[obj_mask])
-            total_loss = loss_coord + loss_conf + loss_cls
+            total_loss = loss_coord + loss_conf_obj + loss_conf_noobj + loss_cls
 
             # Metrics
             cls_acc = 100 * class_mask[obj_mask].mean()
@@ -144,7 +143,8 @@ class RegionLoss(nn.Module):
             self.metrics = {
                 "loss": total_loss.item(),
                 "loss_coord": loss_coord.item(),
-                "loss_conf": loss_conf.item(),
+                "loss_conf_obj": loss_conf_obj.item(),
+                "loss_conf_noobj": loss_conf_noobj.item(),
                 "loss_cls": loss_cls.item(),
                 "avg_iou": iou_scores[obj_mask].mean(),
                 "conf_obj": conf_obj.item(),
