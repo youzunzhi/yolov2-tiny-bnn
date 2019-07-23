@@ -255,7 +255,7 @@ class Model(BaseModel):
         return hyper_parameters, module_list
 
     def adjust_learning_rate(self, epoch):
-        assert self.options.pretrained, "Not implemented"
+        assert self.options.just_pretrained, "Not implemented"
         if epoch == 1:
             self.learning_rate *= 10
         elif epoch == 60:
