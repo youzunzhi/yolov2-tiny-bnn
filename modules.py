@@ -58,6 +58,7 @@ class RegionLoss(nn.Module):
         self.class_scale = float(module_def['class_scale'])
         self.coord_scale = float(module_def['coord_scale'])
         self.thresh = float(module_def['thresh'])
+        self.rescore = int(module_def)['rescore']
 
         self.metrics = {}
 
@@ -199,7 +200,7 @@ class RegionLoss(nn.Module):
         gw, gh = gwh.t()
         gi, gj = gxy.long().t()
         # Set masks
-        coord_mask_scale[b, best_n, gj, gi] = 2 - targets[:,4] * targets[:,5]
+        coord_mask_scale[b, best_n, gj, gi] = (2 - targets[:,4] * targets[:,5]) * self.coord_scale
         obj_mask[b, best_n, gj, gi] = 1
         noobj_mask[b, best_n, gj, gi] = 0
 

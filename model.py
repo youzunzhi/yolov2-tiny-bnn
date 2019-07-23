@@ -59,12 +59,13 @@ class Model(BaseModel):
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
         self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()+'.weights'
-        self.max_batches = int(self.hyper_parameters['max_batches'])
-        self.processed_batch = 0
+        self.total_epochs = options.total_epochs
         self.batch_size = self.options.batch_size
-        self.learning_rate = float(self.hyper_parameters['learning_rate'])
-        self.steps = [float(step) for step in self.hyper_parameters['steps'].split(',')]
-        self.scales = [float(scale) for scale in self.hyper_parameters['scales'].split(',')]
+        self.trained = not self.options.just_pretrained and not self.options.no_pretrained
+        if self.trained:
+            self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
+        else:
+            self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.1
 
         self.optimizer = optim.SGD(self.module_list.parameters(),
                                    lr=self.learning_rate/self.batch_size,
@@ -115,9 +116,8 @@ class Model(BaseModel):
 
                 log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), start_time,
                                    self.module_list[-1][0].metrics, self.logger)
-
-                self.processed_batch += 1
-                self.adjust_learning_rate()
+            if not self.trained:
+                self.adjust_learning_rate(epoch)
 
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
@@ -248,18 +248,28 @@ class Model(BaseModel):
 
         return hyper_parameters, module_list
 
-    def adjust_learning_rate(self):
-        self.learning_rate = float(self.hyper_parameters['learning_rate'])
-        for i in range(len(self.steps)):
-            if self.processed_batch >= self.steps[i]:
-                self.learning_rate *= self.scales[i]
-            else:
-                break
+    def adjust_learning_rate(self, epoch):
+        assert self.options.pretrained, "Not implemented"
+        if epoch == 1:
+            self.learning_rate *= 10
+        elif epoch == 60:
+            self.learning_rate *= 0.1
+        elif epoch == 90:
+            self.learning_rate *= 0.1
+        else:
+            return
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.learning_rate / self.batch_size
 
-    def load_weights(self, weights_file):
+    def load_weights(self):
         """Parses and loads the weights stored in 'weights_file'"""
+        if self.options.no_pretrained:
+            return
+        elif self.options.just_pretrained:
+            weights_file = self.options.pretrained_weights
+        else:
+            weights_file = self.options.weights_file
+
         if not os.path.exists(weights_file):
             self.logger.print_log(weights_file+' does not exist, no pretrained weights loaded.')
             return
@@ -267,7 +277,7 @@ class Model(BaseModel):
         with open(weights_file, "rb") as f:
             header = np.fromfile(f, dtype=np.int32, count=4)  # First four are header values
             self.header_info = header  # Needed to write header when saving weights
-            if "darknet" in weights_file:
+            if self.options.just_pretrained:
                 self.seen = 0
             else:
                 self.seen = header[3]  # number of images seen during training

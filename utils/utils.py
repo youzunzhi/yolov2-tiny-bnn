@@ -27,12 +27,17 @@ class Options(object):
         parser.add_argument("--use_cuda", action='store_false', default=True, help="use cuda device or not")
         parser.add_argument("--debug", action='store_true', default=False, help="use remote debugger, make sure remote debugger is running")
         if training:
-            parser.add_argument("--pretrain_model_cfg", type=str, default="cfg/darknet.cfg", help="path to pretrain model cfg file")
+            parser.add_argument("--total_epochs", type=int, default=160, help="total train epochs")
+            # parser.add_argument("--pretrain_model_cfg", type=str, default="cfg/darknet.cfg", help="path to pretrain model cfg file")
             parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
             parser.add_argument("--save_interval", type=int, default=100, help="interval of saving model weights")
             parser.add_argument('--save_path', type=str, default='./weights/', help='Folder to save checkpoints and log.')
             parser.add_argument("--eval_interval", type=int, default=100, help="interval of evaluations on validation set")
             parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
+            parser.add_argument("--no_pretrained", action='store_true', default=False, help="train from scratch")
+            parser.add_argument("--just_pretrained", action='store_true', default=False, help="only use pretrained weights")
+            parser.add_argument("--pretrained_weights", type=str, default="weights/darknet.weights", help="path to pretrained weights file")
+
         else:
             parser.add_argument("--conf_thresh", type=float, default=0, help="only keep detections with conf higher than conf_thresh")
 
