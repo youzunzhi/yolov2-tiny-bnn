@@ -20,5 +20,5 @@ if __name__ == "__main__":
         collate_fn=dataset.collate_fn
     )
 
-    model = Model(options, logger)
+    model = Model(options, logger, training=False)
     model.eval(dataloader)

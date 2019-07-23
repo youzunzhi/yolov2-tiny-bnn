@@ -50,26 +50,28 @@ class BaseModel(object):
             getattr(self, m).eval()
 
 class Model(BaseModel):
-    def __init__(self, options, logger):
+    def __init__(self, options, logger, training=True):
         super(BaseModel, self).__init__()
         self.options = options
         self.logger = logger
         self.modules_def = self.parse_model_cfg(options.model_cfg)
         self.hyper_parameters, self.module_list = self.get_module_list()
-        self.seen = 0
-        self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
-        self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0]+logger.time_string()+'.weights'
         self.batch_size = self.options.batch_size
-        self.trained = not self.options.just_pretrained and not self.options.no_pretrained
-        if self.trained:
-            self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
-        else:
-            self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.1
+        self.training = training
+        if training:
+            self.seen = 0
+            self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
+            self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0] + logger.time_string() + '.weights'
+            self.trained = not self.options.just_pretrained and not self.options.no_pretrained
+            if self.trained:
+                self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
+            else:
+                self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.1
 
-        self.optimizer = optim.SGD(self.module_list.parameters(),
-                                   lr=self.learning_rate/self.batch_size,
-                                   momentum=float(self.hyper_parameters['momentum']),
-                                   weight_decay=float(self.hyper_parameters['decay']))
+            self.optimizer = optim.SGD(self.module_list.parameters(),
+                                       lr=self.learning_rate/self.batch_size,
+                                       momentum=float(self.hyper_parameters['momentum']),
+                                       weight_decay=float(self.hyper_parameters['decay']))
 
     def forward(self, inputs, targets=None):
         outputs = None
