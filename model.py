@@ -58,6 +58,7 @@ class Model(BaseModel):
         self.hyper_parameters, self.module_list = self.get_module_list()
         self.batch_size = self.options.batch_size
         self.training = training
+        weights_file = self.options.weights_file
         if training:
             self.seen = 0
             self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
@@ -65,13 +66,19 @@ class Model(BaseModel):
             self.trained = not self.options.just_pretrained and not self.options.no_pretrained
             if self.trained:
                 self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
-            else:
+            elif self.options.just_pretrained:
                 self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.1
+                weights_file = self.options.pretrained_weights
+            else:
+                self.learning_rate = 0.1
+                weights_file = 'no pretrain'
 
             self.optimizer = optim.SGD(self.module_list.parameters(),
                                        lr=self.learning_rate/self.batch_size,
                                        momentum=float(self.hyper_parameters['momentum']),
                                        weight_decay=float(self.hyper_parameters['decay']))
+
+        self.load_weights(weights_file)
 
     def forward(self, inputs, targets=None):
         outputs = None
@@ -101,13 +108,6 @@ class Model(BaseModel):
             return outputs
 
     def train(self, train_dataloader, eval_dataloader):
-        if self.options.no_pretrained:
-            weights_file = 'no pretrain'
-        elif self.options.just_pretrained:
-            weights_file = self.options.pretrained_weights
-        else:
-            weights_file = self.options.weights_file
-        self.load_weights(weights_file)
         total_epochs = self.options.total_epochs
         self.set_train_state()
         for epoch in range(total_epochs):
@@ -142,9 +142,7 @@ class Model(BaseModel):
             fname = os.path.join(self.options.save_path, self.save_weights_fname)
             self.save_weights(fname)
 
-
     def eval(self, dataloader):
-        self.load_weights(self.options.weights_file)
         self.set_eval_state()
         metrics = []
         labels = []
