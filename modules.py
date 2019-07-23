@@ -58,7 +58,7 @@ class RegionLoss(nn.Module):
         self.class_scale = float(module_def['class_scale'])
         self.coord_scale = float(module_def['coord_scale'])
         self.thresh = float(module_def['thresh'])
-        self.rescore = int(module_def)['rescore']
+        self.rescore = int(module_def['rescore'])
 
         self.metrics = {}
 
@@ -220,6 +220,8 @@ class RegionLoss(nn.Module):
         class_mask[b, best_n, gj, gi] = (pred_cls[b, best_n, gj, gi].argmax(-1) == target_labels).float()
         iou_scores[b, best_n, gj, gi] = bbox_iou(pred_boxes[b, best_n, gj, gi], target_boxes, x1y1x2y2=False)
 
-        tconf = obj_mask.float() * iou_scores # rescore
-        # tconf = obj_mask.float()
+        if self.rescore:
+            tconf = obj_mask.float() * iou_scores # rescore
+        else:
+            tconf = obj_mask.float()
         return iou_scores, class_mask, coord_mask_scale, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf
