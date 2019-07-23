@@ -101,10 +101,17 @@ class Model(BaseModel):
             return outputs
 
     def train(self, train_dataloader, eval_dataloader):
-        total_epochs = self.max_batches // len(train_dataloader) + 1
+        if self.options.no_pretrained:
+            weights_file = 'no pretrain'
+        elif self.options.just_pretrained:
+            weights_file = self.options.pretrained_weights
+        else:
+            weights_file = self.options.weights_file
+        self.load_weights(weights_file)
+        total_epochs = self.options.total_epochs
+        self.set_train_state()
         for epoch in range(total_epochs):
             start_time = time.time()
-            self.set_train_state()
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
                 imgs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
@@ -137,6 +144,7 @@ class Model(BaseModel):
 
 
     def eval(self, dataloader):
+        self.load_weights(self.options.weights_file)
         self.set_eval_state()
         metrics = []
         labels = []
@@ -261,15 +269,8 @@ class Model(BaseModel):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.learning_rate / self.batch_size
 
-    def load_weights(self):
+    def load_weights(self, weights_file):
         """Parses and loads the weights stored in 'weights_file'"""
-        if self.options.no_pretrained:
-            return
-        elif self.options.just_pretrained:
-            weights_file = self.options.pretrained_weights
-        else:
-            weights_file = self.options.weights_file
-
         if not os.path.exists(weights_file):
             self.logger.print_log(weights_file+' does not exist, no pretrained weights loaded.')
             return
