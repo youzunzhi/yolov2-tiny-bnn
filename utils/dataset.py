@@ -287,4 +287,4 @@ def get_imgs_size(imgs_path):
         img = Image.open(img_path).convert('RGB')
         h, w = img.height, img.width
         sizes.append((w, h, w, h))
-    return torch.LongTensor(sizes)
+    return torch.FloatTensor(sizes)

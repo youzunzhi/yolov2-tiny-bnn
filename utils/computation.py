@@ -23,10 +23,7 @@ def non_max_suppression(model_output, imgs_size, conf_thresh, nms_thresh):
     """
 
     model_output[..., :4] = xywh2xyxy(model_output[..., :4])  # 8, 845, 25
-    model_output[:, ..., 0] *= imgs_size[:, 1]
-    model_output[:, ..., 1] *= imgs_size[:, 0]
-    model_output[:, ..., 2] *= imgs_size[:, 1]
-    model_output[:, ..., 3] *= imgs_size[:, 0]
+    model_output[:, ..., :4] *= imgs_size
 
     nms_output = [None for _ in range(len(model_output))]
     for image_i, image_pred in enumerate(model_output):

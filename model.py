@@ -154,10 +154,8 @@ class Model(BaseModel):
             imgs_size = get_imgs_size(imgs_path)
             # Rescale target
             targets[:, 2:] = xywh2xyxy(targets[:, 2:])
-            targets[:, 2] *= imgs_size[:, 1]
-            targets[:, 3] *= imgs_size[:, 0]
-            targets[:, 4] *= imgs_size[:, 1]
-            targets[:, 5] *= imgs_size[:, 0]
+            for target in targets:
+                target[2:] *= imgs_size[target[0].long()]
 
             outputs = self.forward(imgs)  # B,845,25
             predictions = non_max_suppression(outputs, self.options.conf_thresh, imgs_size, self.options.nms_thresh)
