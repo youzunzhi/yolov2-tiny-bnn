@@ -160,8 +160,7 @@ class Model(BaseModel):
             targets[:, 5] *= imgs_size[:, 0]
 
             outputs = self.forward(imgs)  # B,845,25
-            predictions = get_predictions(outputs, self.options.conf_thresh, imgs_size)
-            predictions = non_max_suppression(predictions, self.options.nms_thresh)
+            predictions = non_max_suppression(outputs, self.options.conf_thresh, imgs_size, self.options.nms_thresh)
             metrics += get_batch_metrics(predictions, targets)
 
         show_eval_result(metrics, labels, self.logger)
