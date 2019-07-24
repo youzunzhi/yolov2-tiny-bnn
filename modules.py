@@ -114,7 +114,7 @@ class RegionLoss(nn.Module):
                 pred_cls=pred_cls,
                 targets=targets,
                 anchors=self.anchors,
-                ignore_thres=self.thresh,
+                ignore_thresh=self.thresh,
                 seen=seen
             )
 
@@ -164,7 +164,7 @@ class RegionLoss(nn.Module):
 
             return output, total_loss
 
-    def build_targets(self, pred_boxes, pred_cls, targets, anchors, ignore_thres, seen):
+    def build_targets(self, pred_boxes, pred_cls, targets, anchors, ignore_thresh, seen):
 
         ByteTensor = torch.cuda.ByteTensor
         FloatTensor = torch.cuda.FloatTensor
@@ -210,9 +210,15 @@ class RegionLoss(nn.Module):
         obj_mask[b, best_n, gj, gi] = 1
         noobj_mask[b, best_n, gj, gi] = 0
 
-        # Set noobj mask to zero where iou exceeds ignore threshold
-        for i, anchor_ious in enumerate(ious.t()):
-            noobj_mask[b[i], anchor_ious > ignore_thres, gj[i], gi[i]] = 0
+        # # Set noobj mask to zero where iou exceeds ignore threshold
+        # for i, anchor_ious in enumerate(ious.t()):
+        #     noobj_mask[b[i], anchor_ious > ignore_thres, gj[i], gi[i]] = 0
+
+        # Set noobj mask to zero where iou of pred_box and any target box exceeds ignore threshold
+        for target_box in target_boxes:
+            target_box_repeat = target_box.repeat(nB, nA, nG, nG, 1)
+            pred_ious = bbox_iou(pred_boxes, target_box_repeat, x1y1x2y2=False)
+            noobj_mask[pred_ious>ignore_thresh] = 0
 
         # Target Coordinates
         tx[b, best_n, gj, gi] = gx - gx.floor()
