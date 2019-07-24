@@ -34,9 +34,9 @@ def non_max_suppression(model_output, imgs_size, conf_thresh, nms_thresh):
             label_match = detections[0, -1] == detections[:, -1]
             # Indices of boxes with lower confidence scores, large IOUs and matching labels
             invalid = large_overlap & label_match
-            # weights = detections[invalid, 4:5]
+            weights = detections[invalid, 4:5]
             # Merge overlapping bboxes by order of confidence
-            # detections[0, :4] = (weights * detections[invalid, :4]).sum(0) / (weights.sum()+1e-16)
+            detections[0, :4] = (weights * detections[invalid, :4]).sum(0) / (weights.sum()+1e-16)
             keep_boxes += [detections[0]]
             detections = detections[~invalid]
         if keep_boxes:
