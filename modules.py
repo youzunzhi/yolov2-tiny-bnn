@@ -96,10 +96,9 @@ class RegionLoss(nn.Module):
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
-        stride = 32
         output = torch.cat(
             (
-                pred_boxes.view(num_samples, -1, 4) * stride,
+                pred_boxes.view(num_samples, -1, 4) / grid_size,
                 pred_conf.view(num_samples, -1, 1),
                 pred_cls.view(num_samples, -1, self.num_classes),
             ),

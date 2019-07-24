@@ -279,3 +279,12 @@ def rand_scale(s):
     if(random.randint(1,10000)%2):
         return scale
     return 1./scale
+
+
+def get_imgs_size(imgs_path):
+    sizes = []
+    for img_path in imgs_path:
+        img = Image.open(img_path).convert('RGB')
+        h, w = img.height, img.width
+        sizes.append((h, w))
+    return torch.ByteTensor(sizes)

@@ -9,6 +9,7 @@ import os, time
 from modules import *
 from utils.computation import *
 from utils.utils import log_train_progress, show_eval_result
+from utils.dataset import get_imgs_size
 
 class BaseModel(object):
     def set_train_state(self, *names):
@@ -147,15 +148,20 @@ class Model(BaseModel):
         self.set_eval_state()
         metrics = []
         labels = []
-        for batch_i, (imgs, targets, img_path) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
+        for batch_i, (imgs, targets, imgs_path) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
             labels += targets[:, 1].tolist()
             imgs = Variable(imgs.type(torch.cuda.FloatTensor), requires_grad=False)
+            imgs_size = get_imgs_size(imgs_path)
             # Rescale target
             targets[:, 2:] = xywh2xyxy(targets[:, 2:])
-            targets[:, 2:] *= int(self.hyper_parameters['width'])
+            targets[:, 2] *= imgs_size[:, 1]
+            targets[:, 3] *= imgs_size[:, 0]
+            targets[:, 4] *= imgs_size[:, 1]
+            targets[:, 5] *= imgs_size[:, 0]
 
             outputs = self.forward(imgs)  # B,845,25
-            predictions = non_max_suppression(outputs, self.options.conf_thresh, self.options.nms_thresh)
+            predictions = get_predictions(outputs, self.options.conf_thresh, imgs_size)
+            predictions = non_max_suppression(predictions, self.options.nms_thresh)
             metrics += get_batch_metrics(predictions, targets)
 
         show_eval_result(metrics, labels, self.logger)

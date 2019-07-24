@@ -3,7 +3,18 @@ import numpy as np
 import tqdm
 
 
-def non_max_suppression(model_output, conf_thresh, nms_thresh):
+def get_predictions(outputs, ):
+    """
+
+    :param outputs: size: B, 845, 25. coords are xywh and ratio of img
+    :param img_sizes: size: B, 2.
+    :param conf_thresh:
+    :return:
+    """
+    pass
+
+
+def non_max_suppression(model_output, imgs_size, conf_thresh, nms_thresh):
     """
     Removes model_output with lower object confidence score than 'conf_thresh' and performs
     Non-Maximum Suppression to further filter model_output.
@@ -12,6 +23,11 @@ def non_max_suppression(model_output, conf_thresh, nms_thresh):
     """
 
     model_output[..., :4] = xywh2xyxy(model_output[..., :4])  # 8, 845, 25
+    model_output[:, ..., 0] *= imgs_size[:, 1]
+    model_output[:, ..., 1] *= imgs_size[:, 0]
+    model_output[:, ..., 2] *= imgs_size[:, 1]
+    model_output[:, ..., 3] *= imgs_size[:, 0]
+
     nms_output = [None for _ in range(len(model_output))]
     for image_i, image_pred in enumerate(model_output):
         # Filter out confidence scores below conf_thresh
