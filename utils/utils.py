@@ -76,7 +76,8 @@ class Logger(object):
     def print_variations(self):
         variation_dict = {"data_augmentation" : False,
                           "object_scale": "noobj/obj",
-                          "seen start from": "weight's"}
+                          "seen start from": "weight's",
+                          "nms merging": "no"}
         self.print_log(str(variation_dict))
 
     def time_string(self):
