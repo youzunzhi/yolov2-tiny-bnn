@@ -278,10 +278,11 @@ class Model(BaseModel):
             header = np.fromfile(f, dtype=np.int32, count=4)  # First four are header values
             self.header_info = header  # Needed to write header when saving weights
             if self.training:
-                if self.training and self.options.just_pretrained:
-                    self.seen = 0
-                else:
-                    self.seen = header[3]  # number of images seen during training
+                # if self.options.just_pretrained:
+                #     self.seen = 0
+                # else:
+                #     self.seen = header[3]  # number of images seen during training
+                self.seen = header[3]  # number of images seen during training
             weights = np.fromfile(f, dtype=np.float32)  # The rest are weights
 
         # Establish cutoff for loading backbone weights
