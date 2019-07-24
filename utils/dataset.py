@@ -286,5 +286,5 @@ def get_imgs_size(imgs_path):
     for img_path in imgs_path:
         img = Image.open(img_path).convert('RGB')
         h, w = img.height, img.width
-        sizes.append((h, w))
-    return torch.ByteTensor(sizes)
+        sizes.append((w, h, w, h))
+    return torch.LongTensor(sizes)
