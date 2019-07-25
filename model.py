@@ -173,6 +173,7 @@ class Model(BaseModel):
                         inputs = module(inputs)
                     elif module_def["type"] == "region":
                         outputs = module[0](inputs, 0)
+                        outputs = outputs.cpu()
                     else:
                         print('unknown type %s' % (module_def['type']))
 
