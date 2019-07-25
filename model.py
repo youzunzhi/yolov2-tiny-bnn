@@ -70,7 +70,7 @@ class Model(BaseModel):
                 self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
                 weights_file = self.options.weights_file
             elif self.no_pretrained:
-                self.learning_rate = 0.1
+                self.learning_rate = float(self.hyper_parameters['learning_rate'])
                 weights_file = 'no pretrain'
             else:
                 self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
@@ -136,8 +136,8 @@ class Model(BaseModel):
 
                 log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), self.learning_rate, start_time,
                                    self.module_list[-1][0].metrics, self.logger)
-            # if not self.trained:
-            #     self.adjust_learning_rate(epoch)
+            if self.no_pretrained:
+                self.adjust_learning_rate(epoch)
 
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
@@ -277,18 +277,17 @@ class Model(BaseModel):
 
         return hyper_parameters, module_list
 
-    # def adjust_learning_rate(self, epoch):
-    #     assert not self.options.no_pretrained, "Not implemented"
-    #     if epoch == 1:
-    #         self.learning_rate *= 10
-    #     elif epoch == 60:
-    #         self.learning_rate *= 0.1
-    #     elif epoch == 90:
-    #         self.learning_rate *= 0.1
-    #     else:
-    #         return
-    #     for param_group in self.optimizer.param_groups:
-    #         param_group['lr'] = self.learning_rate / self.batch_size
+    def adjust_learning_rate(self, epoch):
+        if epoch == 1:
+            self.learning_rate *= 10
+        elif epoch == 60:
+            self.learning_rate *= 0.1
+        elif epoch == 90:
+            self.learning_rate *= 0.1
+        else:
+            return
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.learning_rate / self.batch_size
 
     def load_weights(self, weights_file):
         """Parses and loads the weights stored in 'weights_file'"""
