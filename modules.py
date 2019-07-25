@@ -247,6 +247,7 @@ class RegionLoss2(nn.Module):
         self.anchors = [(self.anchors[i], self.anchors[i + 1]) for i in range(0, len(anchors), 2)]  # list of tuple (anchor_w, anchor_h)
         self.num_classes = int(module_def['classes'])
         self.num_anchors = int(module_def['num'])
+        self.anchor_step = len(anchors)//self.num_anchors
 
         self.object_scale = float(module_def['object_scale'])
         # self.object_scale = 10
