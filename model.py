@@ -59,7 +59,6 @@ class Model(BaseModel):
         self.hyper_parameters, self.module_list = self.get_module_list()
         self.batch_size = self.options.batch_size
         self.training = training
-        weights_file = self.options.weights_file
         if training:
             self.seen = 0
             self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
@@ -69,6 +68,7 @@ class Model(BaseModel):
 
             if self.trained:
                 self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
+                weights_file = self.options.weights_file
             elif self.no_pretrained:
                 self.learning_rate = 0.1
                 weights_file = 'no pretrain'
@@ -81,6 +81,8 @@ class Model(BaseModel):
                                        lr=self.learning_rate/self.batch_size,
                                        momentum=float(self.hyper_parameters['momentum']),
                                        weight_decay=decay*self.batch_size)
+        else:
+            weights_file = self.options.weights_file
 
         self.load_weights(weights_file)
 
