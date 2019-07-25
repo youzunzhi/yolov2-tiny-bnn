@@ -78,7 +78,7 @@ class Logger(object):
                           "object_scale": "noobj/obj",
                           "seen start from": "weight's",
                           # "nms merging": "yes",
-                          "RegionLoss": 2,
+                          "RegionLoss": 1,
                           "lr": "keep 0.001*0.01"}
         self.print_log(str(variation_dict))
 

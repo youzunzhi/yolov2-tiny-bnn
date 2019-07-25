@@ -265,7 +265,7 @@ class Model(BaseModel):
                 modules.add_module(f"maxpool_{module_i}", maxpool)
 
             elif module_def["type"] == "region":
-                region = RegionLoss2(module_def)
+                region = RegionLoss(module_def)
                 modules.add_module(f"region_{module_i}", region)
 
             else:
