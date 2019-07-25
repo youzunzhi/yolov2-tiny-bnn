@@ -64,15 +64,17 @@ class Model(BaseModel):
             self.seen = 0
             self.header_info = np.array([0, 0, 0, self.seen], dtype=np.int32)
             self.save_weights_fname = options.model_cfg.split('/')[1].split('.')[0] + logger.time_string() + '.weights'
-            self.trained = not self.options.just_pretrained and not self.options.no_pretrained
+            self.trained = self.options.trained
+            self.no_pretrained = self.options.no_pretrained
+
             if self.trained:
                 self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
-            elif self.options.just_pretrained:
-                self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.1
-                weights_file = self.options.pretrained_weights
-            else:
+            elif self.no_pretrained:
                 self.learning_rate = 0.1
                 weights_file = 'no pretrain'
+            else:
+                self.learning_rate = float(self.hyper_parameters['learning_rate']) * 0.01
+                weights_file = self.options.pretrained_weights
 
             decay = float(self.hyper_parameters['decay'])
             self.optimizer = optim.SGD(self.module_list.parameters(),
@@ -82,32 +84,32 @@ class Model(BaseModel):
 
         self.load_weights(weights_file)
 
-    def forward(self, inputs, targets=None):
-        outputs = None
-        if targets is not None:
-            loss = 0
-            for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
-                if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                    inputs = module(inputs)
-                elif module_def["type"] == "region":
-                    outputs, region_loss = module[0](inputs, self.seen, targets)
-                    loss += region_loss
-                    self.seen += inputs.shape[0]
-                else:
-                    print('unknown type %s' % (module_def['type']))
-            outputs = outputs.detach().cpu()
-            return outputs, loss
-        else:
-            with torch.no_grad():
-                for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
-                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                        inputs = module(inputs)
-                    elif module_def["type"] == "region":
-                        outputs, _ = module[0](inputs, 0)
-                    else:
-                        print('unknown type %s' % (module_def['type']))
-            outputs = outputs.detach().cpu()
-            return outputs
+    # def forward(self, inputs, targets=None):
+    #     outputs = None
+    #     if targets is not None:
+    #         loss = 0
+    #         for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+    #             if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
+    #                 inputs = module(inputs)
+    #             elif module_def["type"] == "region":
+    #                 outputs, region_loss = module[0](inputs, self.seen, targets)
+    #                 loss += region_loss
+    #                 self.seen += inputs.shape[0]
+    #             else:
+    #                 print('unknown type %s' % (module_def['type']))
+    #         outputs = outputs.detach().cpu()
+    #         return outputs, loss
+    #     else:
+    #         with torch.no_grad():
+    #             for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+    #                 if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
+    #                     inputs = module(inputs)
+    #                 elif module_def["type"] == "region":
+    #                     outputs, _ = module[0](inputs, 0)
+    #                 else:
+    #                     print('unknown type %s' % (module_def['type']))
+    #         outputs = outputs.detach().cpu()
+    #         return outputs
 
     def train(self, train_dataloader, eval_dataloader):
         total_epochs = self.options.total_epochs
@@ -115,18 +117,25 @@ class Model(BaseModel):
         for epoch in range(total_epochs):
             start_time = time.time()
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
-                imgs = Variable(imgs.type(torch.cuda.FloatTensor))
+                inputs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
-                outputs, loss = self.forward(imgs, targets)
+                for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
+                        inputs = module(inputs)
+                    elif module_def["type"] == "region":
+                        loss = module[0](inputs, self.seen, targets)
+                        self.seen += inputs.shape[0]
+                    else:
+                        print('unknown type %s' % (module_def['type']))
 
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
 
-                log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), start_time,
+                log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), self.learning_rate, start_time,
                                    self.module_list[-1][0].metrics, self.logger)
-            if not self.trained:
-                self.adjust_learning_rate(epoch)
+            # if not self.trained:
+            #     self.adjust_learning_rate(epoch)
 
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
@@ -150,14 +159,21 @@ class Model(BaseModel):
         labels = []
         for batch_i, (imgs, targets, imgs_path) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
             labels += targets[:, 1].tolist()
-            imgs = Variable(imgs.type(torch.cuda.FloatTensor), requires_grad=False)
+            inputs = Variable(imgs.type(torch.cuda.FloatTensor), requires_grad=False)
             imgs_size = get_imgs_size(imgs_path)
             # Rescale target
             targets[:, 2:] = xywh2xyxy(targets[:, 2:])
             for target in targets:
                 target[2:] *= imgs_size[target[0].long()]
+            with torch.no_grad():
+                for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
+                        inputs = module(inputs)
+                    elif module_def["type"] == "region":
+                        outputs = module[0](inputs, 0)
+                    else:
+                        print('unknown type %s' % (module_def['type']))
 
-            outputs = self.forward(imgs)  # B,845,25
             predictions = non_max_suppression(outputs, imgs_size, self.options.conf_thresh, self.options.nms_thresh)
             metrics += get_batch_metrics(predictions, targets)
 
@@ -258,18 +274,18 @@ class Model(BaseModel):
 
         return hyper_parameters, module_list
 
-    def adjust_learning_rate(self, epoch):
-        assert self.options.just_pretrained, "Not implemented"
-        if epoch == 1:
-            self.learning_rate *= 10
-        elif epoch == 60:
-            self.learning_rate *= 0.1
-        elif epoch == 90:
-            self.learning_rate *= 0.1
-        else:
-            return
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.learning_rate / self.batch_size
+    # def adjust_learning_rate(self, epoch):
+    #     assert not self.options.no_pretrained, "Not implemented"
+    #     if epoch == 1:
+    #         self.learning_rate *= 10
+    #     elif epoch == 60:
+    #         self.learning_rate *= 0.1
+    #     elif epoch == 90:
+    #         self.learning_rate *= 0.1
+    #     else:
+    #         return
+    #     for param_group in self.optimizer.param_groups:
+    #         param_group['lr'] = self.learning_rate / self.batch_size
 
     def load_weights(self, weights_file):
         """Parses and loads the weights stored in 'weights_file'"""

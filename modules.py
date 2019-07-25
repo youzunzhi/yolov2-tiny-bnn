@@ -106,7 +106,7 @@ class RegionLoss(nn.Module):
         )  # 8,(H*W*5),25
 
         if targets is None:
-            return output, 0
+            return output
         else:
             iou_scores, class_mask, coord_mask_scale, obj_mask, noobj_mask, tx, ty, tw, th, tcls, tconf = self.build_targets(
                 pred_boxes=pred_boxes,
@@ -161,7 +161,7 @@ class RegionLoss(nn.Module):
                 "grid_size": grid_size,
             }
 
-            return output, total_loss
+            return total_loss
 
     def build_targets(self, pred_boxes, pred_cls, targets, anchors, ignore_thresh, seen):
 
@@ -359,7 +359,7 @@ class RegionLoss2(nn.Module):
                 gw = target[b][t * 5 + 3] * nW
                 gh = target[b][t * 5 + 4] * nH
                 cur_gt_boxes = torch.FloatTensor([gx, gy, gw, gh]).repeat(nAnchors, 1).t()
-                cur_ious = torch.max(cur_ious, bbox_ious(cur_pred_boxes, cur_gt_boxes, x1y1x2y2=False))
+                cur_ious = torch.max(cur_ious, bbox_iou(cur_pred_boxes, cur_gt_boxes, x1y1x2y2=False))
             temp_thresh = cur_ious > sil_thresh
             conf_mask[b][temp_thresh.view(conf_mask[b].shape)] = 0
         if seen < 12800:
