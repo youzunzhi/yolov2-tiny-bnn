@@ -86,33 +86,6 @@ class Model(BaseModel):
 
         self.load_weights(weights_file)
 
-    # def forward(self, inputs, targets=None):
-    #     outputs = None
-    #     if targets is not None:
-    #         loss = 0
-    #         for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
-    #             if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-    #                 inputs = module(inputs)
-    #             elif module_def["type"] == "region":
-    #                 outputs, region_loss = module[0](inputs, self.seen, targets)
-    #                 loss += region_loss
-    #                 self.seen += inputs.shape[0]
-    #             else:
-    #                 print('unknown type %s' % (module_def['type']))
-    #         outputs = outputs.detach().cpu()
-    #         return outputs, loss
-    #     else:
-    #         with torch.no_grad():
-    #             for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
-    #                 if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-    #                     inputs = module(inputs)
-    #                 elif module_def["type"] == "region":
-    #                     outputs, _ = module[0](inputs, 0)
-    #                 else:
-    #                     print('unknown type %s' % (module_def['type']))
-    #         outputs = outputs.detach().cpu()
-    #         return outputs
-
     def train(self, train_dataloader, eval_dataloader):
         total_epochs = self.options.total_epochs
         self.set_train_state()
