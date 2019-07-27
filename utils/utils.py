@@ -1,11 +1,11 @@
 import argparse
 import os, sys, time
-import torch
 import numpy as np
 from terminaltables import AsciiTable
 import time
 import datetime
-
+import torch
+import torch.optim as optim
 from utils.computation import ap_per_class
 
 
@@ -28,14 +28,12 @@ class Options(object):
         if training:
             parser.add_argument("--total_epochs", type=int, default=160, help="total train epochs")
             parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
-            parser.add_argument("--no_pretrained", action='store_true', default=False, help="train from scratch")
-            parser.add_argument("--trained", action='store_true', default=False, help="use trained weights")
             parser.add_argument("--eval_interval", type=int, default=100, help="interval of evaluations on validation set")
             parser.add_argument("--save_interval", type=int, default=100, help="interval of saving model weights")
             parser.add_argument('--save_path', type=str, default='./weights/', help='Folder to save checkpoints and log.')
+            parser.add_argument("--pretrain_model_cfg", type=str, default="cfg/darknet-voc.cfg", help="path to pretrain model cfg file")
             parser.add_argument("--pretrained_weights", type=str, default="weights/darknet.weights", help="path to pretrained weights file")
             parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
-
         else:
             parser.add_argument("--weights_file", type=str, default="weights/yolov2-tiny-voc.weights",
                                 help="path to weights file")
@@ -88,6 +86,73 @@ class Logger(object):
         return string
 
 
+class OptimizerManager(object):
+    def __init__(self, modules_list, stage, batch_size):
+        self.modules_list = modules_list
+        self.stage = stage
+        self.batch_size = batch_size
+
+    def get_optimizer(self):
+        if self.stage == 'train':
+            self.learning_rate = 1e-07
+            self.momentum = 0.9
+            self.weight_decay = 0.0005
+            self.optimizer = optim.SGD(self.modules_list.parameters(),
+                                   lr=self.learning_rate / self.batch_size,
+                                   momentum=self.momentum,
+                                   weight_decay=self.weight_decay * self.batch_size)
+
+        elif self.stage == 'pretrain':
+            self.learning_rate = 1e-05
+            self.momentum = 0.9
+            self.weight_decay = 0.0005
+            self.optimizer = optim.SGD(self.modules_list.parameters(),
+                                       lr=self.learning_rate / self.batch_size,
+                                       momentum=self.momentum,
+                                       weight_decay=self.weight_decay * self.batch_size)
+
+        return self.optimizer
+
+    def adjust_learning_rate(self, epoch):
+        if self.stage == 'train':
+            if epoch == 60:
+                self.learning_rate *= 0.1
+                for param_group in self.optimizer.param_groups:
+                    param_group['lr'] = self.learning_rate / self.batch_size
+        elif self.stage == 'pretrain':
+            if epoch == 60:
+                self.learning_rate *= 0.1
+                for param_group in self.optimizer.param_groups:
+                    param_group['lr'] = self.learning_rate / self.batch_size
+
+
+def parse_model_cfg(model_cfg_path):
+    """
+    Parses the model configuration file and returns module definitions
+    :param model_cfg_path: str
+    :return: list of dicts
+    """
+    model_cfg_file = open(model_cfg_path, 'r')
+    lines = model_cfg_file.read().split('\n')
+    lines = [x for x in lines if x and not x.startswith('#')]  # get rid of comments
+    lines = [x.rstrip().lstrip() for x in lines]  # get rid of fringe whitespaces
+    module_defs = []
+    for line in lines:
+        if line.startswith('['):  # This marks the start of a new block
+            module_defs.append({})
+            module_defs[-1]['type'] = line[1:-1].rstrip()
+            if module_defs[-1]['type'] == 'convolutional':
+                module_defs[-1]['batch_normalize'] = 0
+        else:
+            key, value = line.split("=")
+            value = value.strip()
+            module_defs[-1][key.rstrip()] = value.strip()
+
+    return module_defs
+
+
+
+
 def log_train_progress(epoch, total_epochs, batch_i, total_batch, lr, start_time, metrics, logger):
     log_str = "\n---- [Epoch %d/%d, Batch %d/%d, LR %f] ----\n" % (epoch, total_epochs, batch_i, total_batch, lr)
     metric_table = [["Metrics", "Region Layer"]]
@@ -110,3 +175,4 @@ def show_eval_result(metrics, labels, logger):
     true_positives, pred_conf, pred_labels = [np.concatenate(x, 0) for x in list(zip(*metrics))]
     precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_conf, pred_labels, labels)
     logger.print_log(f"mAP: {AP.mean()}")
+

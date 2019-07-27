@@ -8,9 +8,87 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
+class PretrainDataset(Dataset):
+    def __init__(self, options, training):
+        super(PretrainDataset, self).__init__()
+        self.data_cfg = self.parse_data_cfg(options.data_cfg)
+        if training:
+            path = self.data_cfg["train"]
+        else:
+            path = self.data_cfg["valid"]
+        with open(path, "r") as file:
+            self.img_files = file.readlines()
+        if self.data_cfg['names'].find('voc') != -1:
+            self.label_files = [
+                path.replace("JPEGImages", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
+                for path in self.img_files
+            ]
+        else:  # suppose it's COCO
+            self.label_files = [
+                path.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
+                for path in self.img_files
+            ]
+
+        self.options = options
+        self.batch_size = self.options.batch_size
+        self.batch_count = 0
+        self.img_size = 13 * 32
+        self.training = training
+
+        # for data augmentation (could be bad implementation, should load from cfg but it's so much easier this way, guess we won't modify these cfgs)
+        self.jitter = 0.2
+        self.saturation = 1.5
+        self.exposure = 1.5
+        self.hue = 0.1
+
+    def __getitem__(self, index):
+        img_path = self.img_files[index % len(self.img_files)].rstrip()
+        label_path = self.label_files[index % len(self.img_files)].rstrip()
+        img = Image.open(img_path).convert('RGB')
+        boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
+        if self.training:
+            img, boxes = data_augmentation(img, boxes, self.jitter, self.hue, self.saturation, self.exposure)
+        img = transforms.ToTensor()(img)
+        targets = torch.zeros((len(boxes), 2))
+        targets[:, 1] = boxes[:, 0]
+
+        return img, targets, img_path
+
+    def collate_fn(self, batch):
+        imgs, targets, img_paths = list(zip(*batch))
+        # Remove empty placeholder targets
+        targets = [target for target in targets if target is not None]
+        # Add sample index to targets
+        for i, target in enumerate(targets):
+            target[:, 0] = i
+        targets = torch.cat(targets, 0)
+        # Selects new image size every tenth batch
+        if self.training and self.multiscale and self.batch_count % 10 == 0:
+            self.img_size = random.choice(range(self.min_scale, self.max_scale + 1, 32))
+        # Resize images to input shape
+        imgs = torch.stack([self.resize(img, img_path, self.img_size) for (img, img_path) in zip(imgs, img_paths)])
+
+        self.batch_count += 1
+        return imgs, targets, img_paths
+
+    def parse_data_cfg(self, path):
+        """Parses the data configuration file"""
+        options = dict()
+        with open(path, 'r') as fp:
+            lines = fp.readlines()
+        for line in lines:
+            line = line.strip()
+            if line == '' or line.startswith('#'):
+                continue
+            key, value = line.split('=')
+            options[key.strip()] = value.strip()
+        return options
+
+
 
 class Yolov2Dataset(Dataset):
     def __init__(self, options, training):
+        super(Yolov2Dataset, self).__init__()
         self.data_cfg = self.parse_data_cfg(options.data_cfg)
         if training:
             path = self.data_cfg["train"]
@@ -40,7 +118,7 @@ class Yolov2Dataset(Dataset):
                 self.multiscale_interval = 10
                 self.min_scale = 10 * 32
                 self.max_scale = 19 * 32
-        self.get_item_choice = 1 # 0 for erik, 1 for marvis
+        self.get_item_choice = 1  # 0 for erik, 1 for marvis
         # for data augmentation (could be bad implementation, should load from cfg but it's so much easier this way, guess we won't modify these cfgs)
         self.jitter = 0.2
         self.saturation = 1.5
@@ -185,7 +263,7 @@ def horizontal_flip(images, targets):
     targets[:, 2] = 1 - targets[:, 2]
     return images, targets
 
-def data_augmentation(img, boxes, jitter, hue, saturation, exposure):
+def data_augmentation(img, boxes, jitter, hue, saturation, exposure, pretrain=False):
     """convert from darknet"""
 
     # --- crop img according to jitter ---
@@ -205,33 +283,34 @@ def data_augmentation(img, boxes, jitter, hue, saturation, exposure):
 
     cropped = img.crop((left_crop_pixel, top_crop_pixel, left_crop_pixel + cropped_width - 1, top_crop_pixel + cropped_height - 1))
 
-    # ---- adjust label boxes ----
-    # get xyxy pixel coord
-    x1_pixel = (boxes[:, 1] - boxes[:, 3] / 2) * origin_width
-    y1_pixel = (boxes[:, 2] - boxes[:, 4] / 2) * origin_height
-    x2_pixel = (boxes[:, 1] + boxes[:, 3] / 2) * origin_width
-    y2_pixel = (boxes[:, 2] + boxes[:, 4] / 2) * origin_height
-    # adjust them according to cropped pixel
-    x1_pixel -= left_crop_pixel
-    y1_pixel -= top_crop_pixel
-    x2_pixel -= left_crop_pixel
-    y2_pixel -= top_crop_pixel
-    # constrain them inside the img
-    x1_pixel[x1_pixel < 0], y1_pixel[y1_pixel < 0], x2_pixel[x2_pixel < 0], y2_pixel[y2_pixel < 0] = 0, 0, 0, 0
-    x1_pixel[x1_pixel > cropped_width], y1_pixel[y1_pixel > cropped_height], x2_pixel[x2_pixel > cropped_width], y2_pixel[y2_pixel > cropped_height] = cropped_width, cropped_height, cropped_width, cropped_height
-    # return to xywh pixel coord
-    x_pixel = (x1_pixel + x2_pixel) / 2
-    y_pixel = (y1_pixel + y2_pixel) / 2
-    w_pixel = x2_pixel - x1_pixel
-    h_pixel = y2_pixel - y1_pixel
-    # boxes saves the targets' ratio of whole img
-    boxes[:, 1] = x_pixel / cropped_width
-    boxes[:, 2] = y_pixel / cropped_height
-    boxes[:, 3] = w_pixel / cropped_width
-    boxes[:, 4] = h_pixel / cropped_height
-    # drop bad target
-    boxes = boxes[boxes[:, 3] > 0.001]
-    boxes = boxes[boxes[:, 4] > 0.001]
+    if not pretrain:
+        # ---- adjust label boxes ----
+        # get xyxy pixel coord
+        x1_pixel = (boxes[:, 1] - boxes[:, 3] / 2) * origin_width
+        y1_pixel = (boxes[:, 2] - boxes[:, 4] / 2) * origin_height
+        x2_pixel = (boxes[:, 1] + boxes[:, 3] / 2) * origin_width
+        y2_pixel = (boxes[:, 2] + boxes[:, 4] / 2) * origin_height
+        # adjust them according to cropped pixel
+        x1_pixel -= left_crop_pixel
+        y1_pixel -= top_crop_pixel
+        x2_pixel -= left_crop_pixel
+        y2_pixel -= top_crop_pixel
+        # constrain them inside the img
+        x1_pixel[x1_pixel < 0], y1_pixel[y1_pixel < 0], x2_pixel[x2_pixel < 0], y2_pixel[y2_pixel < 0] = 0, 0, 0, 0
+        x1_pixel[x1_pixel > cropped_width], y1_pixel[y1_pixel > cropped_height], x2_pixel[x2_pixel > cropped_width], y2_pixel[y2_pixel > cropped_height] = cropped_width, cropped_height, cropped_width, cropped_height
+        # return to xywh pixel coord
+        x_pixel = (x1_pixel + x2_pixel) / 2
+        y_pixel = (y1_pixel + y2_pixel) / 2
+        w_pixel = x2_pixel - x1_pixel
+        h_pixel = y2_pixel - y1_pixel
+        # boxes saves the targets' ratio of whole img
+        boxes[:, 1] = x_pixel / cropped_width
+        boxes[:, 2] = y_pixel / cropped_height
+        boxes[:, 3] = w_pixel / cropped_width
+        boxes[:, 4] = h_pixel / cropped_height
+        # drop bad target
+        boxes = boxes[boxes[:, 3] > 0.001]
+        boxes = boxes[boxes[:, 4] > 0.001]
     # randomly filp img
     flip = random.randint(1, 10000) % 2
     if flip:
