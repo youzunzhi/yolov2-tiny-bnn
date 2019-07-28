@@ -74,7 +74,7 @@ class Logger(object):
         print(string)
 
     def print_variations(self):
-        variation_dict = {"data_augmentation" : False,
+        variation_dict = {"data_augmentation" : True,
                           "object_scale": "noobj/obj",
                           "seen start from": "weight's",
                           # "nms merging": "yes",
