@@ -55,8 +55,8 @@ class Model(BaseModel):
         super(BaseModel, self).__init__()
         self.options = options
         self.logger = logger
-        self.modules_def = self.parse_model_cfg(options.model_cfg)
-        self.hyper_parameters, self.module_list = self.get_module_list()
+        self.modules_defs = self.parse_model_cfg(options.model_cfg)
+        self.hyper_parameters, self.modules_list = self.get_module_list()
         self.batch_size = self.options.batch_size
         self.training = training
         if training:
@@ -77,7 +77,7 @@ class Model(BaseModel):
                 weights_file = self.options.pretrained_weights
 
             decay = float(self.hyper_parameters['decay'])
-            self.optimizer = optim.SGD(self.module_list.parameters(),
+            self.optimizer = optim.SGD(self.modules_list.parameters(),
                                        lr=self.learning_rate/self.batch_size,
                                        momentum=float(self.hyper_parameters['momentum']),
                                        weight_decay=decay*self.batch_size)
@@ -94,7 +94,7 @@ class Model(BaseModel):
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
                 inputs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
-                for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+                for i, (module_def, module) in enumerate(zip(self.modules_defs, self.modules_list)):
                     if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
                         inputs = module(inputs)
                     elif module_def["type"] == "region":
@@ -105,12 +105,16 @@ class Model(BaseModel):
 
                 self.optimizer.zero_grad()
                 loss.backward()
+                for p in list(self.modules_list.parameters()):
+                    if hasattr(p, 'org'):
+                        p.data.copy_(p.org)
                 self.optimizer.step()
+                for p in list(self.modules_list.parameters()):
+                    if hasattr(p, 'org'):
+                        p.org.copy_(p.data.clamp_(-1, 1))
 
                 log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), self.learning_rate, start_time,
-                                   self.module_list[-1][0].metrics, self.logger)
-            if self.no_pretrained:
-                self.adjust_learning_rate(epoch)
+                                   self.modules_list[-1][0].metrics, self.logger)
 
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
@@ -119,6 +123,7 @@ class Model(BaseModel):
                 self.logger.print_log("\n---- Saving Model ----")
                 fname = os.path.join(self.options.save_path, self.save_weights_fname)
                 self.save_weights(fname)
+            self.adjust_learning_rate(epoch)
 
         if total_epochs % self.options.eval_interval != self.options.eval_interval - 1:
             self.logger.print_log("\n---- Evaluating Model ----")
@@ -141,7 +146,7 @@ class Model(BaseModel):
             for target in targets:
                 target[2:] *= imgs_size[target[0].long()]
             with torch.no_grad():
-                for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+                for i, (module_def, module) in enumerate(zip(self.modules_defs, self.modules_list)):
                     if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
                         inputs = module(inputs)
                     elif module_def["type"] == "region":
@@ -181,22 +186,23 @@ class Model(BaseModel):
         """
             Constructs module list of layer blocks from module configuration in modules_def
         """
-        hyper_parameters = self.modules_def.pop(0)
+        hyper_parameters = self.modules_defs.pop(0)
         output_filters = [int(hyper_parameters["channels"])]
-        module_list = nn.ModuleList()
-        for module_i, module_def in enumerate(self.modules_def):
+        modules_list = nn.ModuleList()
+        binarize_flag = False
+        for modules_i, modules_def in enumerate(self.modules_defs):
             modules = nn.Sequential()
 
-            if module_def["type"] == "convolutional":
-                bn = int(module_def["batch_normalize"])
-                filters = int(module_def["filters"])
-                kernel_size = int(module_def["size"])
-                stride = int(module_def["stride"])
+            if modules_def["type"] == "convolutional":
+                bn = int(modules_def["batch_normalize"])
+                filters = int(modules_def["filters"])
+                kernel_size = int(modules_def["size"])
+                stride = int(modules_def["stride"])
                 pad = (kernel_size - 1) // 2
-                binarize = int(module_def["binarize"]) if "binarize" in module_def else 0
+                binarize = int(modules_def["binarize"]) if "binarize" in modules_def else 0
                 if binarize:
                     modules.add_module(
-                        f"bin_conv_{module_i}",
+                        f"bin_conv_{modules_i}",
                         BinarizeConv2d(
                             in_channels=output_filters[-1],
                             out_channels=filters,
@@ -206,9 +212,19 @@ class Model(BaseModel):
                             bias=not bn,
                         ),
                     )
+                    binarize_flag = True
+                    module_def_pool = self.modules_defs[modules_i + 1]
+                    if module_def_pool["type"] == "maxpool":
+                        pool_size = int(module_def_pool['size'])
+                        stride = int(module_def_pool['stride'])
+                        if stride > 1:
+                            maxpool = nn.MaxPool2d(pool_size, stride)
+                        else:
+                            maxpool = MaxPoolStride1()
+                        modules.add_module(f"maxpool_{modules_i}", maxpool)
                 else:
                     modules.add_module(
-                        f"conv_{module_i}",
+                        f"conv_{modules_i}",
                         nn.Conv2d(
                             in_channels=output_filters[-1],
                             out_channels=filters,
@@ -220,40 +236,51 @@ class Model(BaseModel):
                     )
                 if bn:
                     modules.add_module(
-                        f"batchnorm_{module_i}",
+                        f"batchnorm_{modules_i}",
                         nn.BatchNorm2d(filters, momentum=0.9, eps=1e-5)
                     )
-                if module_def["activation"] == "leaky":
+                if modules_def["activation"] == "leaky":
                     modules.add_module(
-                        f"leaky_{module_i}",
+                        f"leaky_{modules_i}",
                         nn.LeakyReLU(0.1, inplace=True)
                     )
+                elif modules_def["activation"] == "tanh":
+                    modules.add_module(
+                        f"tanh_{modules_i}",
+                        nn.Hardtanh(inplace=True)
+                    )
+                elif modules_def["activation"] == "prelu":
+                    modules.add_module(
+                        f"prelu_{modules_i}",
+                        nn.PReLU()
+                    )
                 output_filters.append(filters)
-            elif module_def["type"] == "maxpool":
-                pool_size = int(module_def['size'])
-                stride = int(module_def['stride'])
-                if stride > 1:
-                    maxpool = nn.MaxPool2d(pool_size, stride)
+            elif modules_def["type"] == "maxpool":
+                if binarize_flag:
+                    binarize_flag = False
                 else:
-                    maxpool = MaxPoolStride1()
-                modules.add_module(f"maxpool_{module_i}", maxpool)
+                    pool_size = int(modules_def['size'])
+                    stride = int(modules_def['stride'])
+                    if stride > 1:
+                        maxpool = nn.MaxPool2d(pool_size, stride)
+                    else:
+                        maxpool = MaxPoolStride1()
+                    modules.add_module(f"maxpool_{modules_i}", maxpool)
 
-            elif module_def["type"] == "region":
-                region = RegionLoss(module_def)
-                modules.add_module(f"region_{module_i}", region)
+            elif modules_def["type"] == "region":
+                region = RegionLoss(modules_def)
+                modules.add_module(f"region_{modules_i}", region)
 
             else:
-                print('unknown type %s' % (module_def['type']))
+                print('unknown type %s' % (modules_def['type']))
 
             modules = modules.cuda()
-            module_list.append(modules)
+            modules_list.append(modules)
 
-        return hyper_parameters, module_list
+        return hyper_parameters, modules_list
 
     def adjust_learning_rate(self, epoch):
-        if epoch == 1:
-            self.learning_rate *= 10
-        elif epoch == 60:
+        if epoch == 60:
             self.learning_rate *= 0.1
         elif epoch == 90:
             self.learning_rate *= 0.1
@@ -285,14 +312,20 @@ class Model(BaseModel):
             cutoff = 13
 
         ptr = 0
-        for i, (module_def, module) in enumerate(zip(self.modules_def, self.module_list)):
+        for i, (modules_def, modules) in enumerate(zip(self.modules_defs, self.modules_list)):
             if i == cutoff:
                 break
-            if module_def["type"] == "convolutional":
-                conv_layer = module[0]
-                if module_def["batch_normalize"]:
+            if modules_def["type"] == "convolutional":
+                for module in modules:
+                    if isinstance(module, nn.Conv2d):
+                        conv_layer = module
+                        break
+                if modules_def["batch_normalize"]:
+                    for module in modules:
+                        if isinstance(module, nn.BatchNorm2d):
+                            bn_layer = module
+                            break
                     # Load BN bias, weights, running mean and running variance
-                    bn_layer = module[1]
                     num_b = bn_layer.bias.numel()  # Number of biases
                     # Bias
                     bn_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.bias)
@@ -333,12 +366,18 @@ class Model(BaseModel):
         self.header_info.tofile(fp)
 
         # Iterate through layers
-        for i, (module_def, module) in enumerate(zip(self.modules_def[:cutoff], self.module_list[:cutoff])):
-            if module_def["type"] == "convolutional":
-                conv_layer = module[0]
+        for i, (modules_def, modules) in enumerate(zip(self.modules_defs[:cutoff], self.modules_list[:cutoff])):
+            if int(modules_def["binarize"]) if "binarize" in modules_def else 0:
+                for module in modules:
+                    if isinstance(module, nn.Conv2d):
+                        conv_layer = module
+                        break
                 # If batch norm, save bn first
-                if module_def["batch_normalize"]:
-                    bn_layer = module[1]
+                if modules_def["batch_normalize"]:
+                    for module in modules:
+                        if isinstance(module, nn.BatchNorm2d):
+                            bn_layer = module
+                            break
                     bn_layer.bias.data.cpu().numpy().tofile(fp)
                     bn_layer.weight.data.cpu().numpy().tofile(fp)
                     bn_layer.running_mean.data.cpu().numpy().tofile(fp)

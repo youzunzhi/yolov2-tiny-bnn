@@ -54,9 +54,9 @@ class RegionLoss(nn.Module):
         self.num_anchors = int(module_def['num'])
 
         # self.object_scale = float(module_def['object_scale'])
-        # self.object_scale = 10
+        # self.object_scale = 5
         self.noobject_scale = float(module_def['noobject_scale'])
-        self.class_scale = float(module_def['class_scale'])
+        self.class_scale = 2*float(module_def['class_scale'])
         self.coord_scale = float(module_def['coord_scale'])
         self.thresh = float(module_def['thresh'])
         self.rescore = int(module_def['rescore'])

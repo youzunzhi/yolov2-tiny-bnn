@@ -186,59 +186,59 @@ def horizontal_flip(images, targets):
     return images, targets
 
 def data_augmentation(img, boxes, jitter, hue, saturation, exposure):
-    """convert from darknet"""
-
-    # --- crop img according to jitter ---
-    origin_height = img.height
-    origin_width = img.width
-
-    width_jitter_range = int(origin_width * jitter)
-    height_jitter_range = int(origin_height * jitter)
-
-    left_crop_pixel = random.randint(-width_jitter_range, width_jitter_range)
-    right_crop_pixel = random.randint(-width_jitter_range, width_jitter_range)
-    top_crop_pixel = random.randint(-height_jitter_range, height_jitter_range)
-    bottom_crop_pixel = random.randint(-height_jitter_range, height_jitter_range)
-
-    cropped_width = origin_width - left_crop_pixel - right_crop_pixel
-    cropped_height = origin_height - top_crop_pixel - bottom_crop_pixel
-
-    cropped = img.crop((left_crop_pixel, top_crop_pixel, left_crop_pixel + cropped_width - 1, top_crop_pixel + cropped_height - 1))
-
-    # ---- adjust label boxes ----
-    # get xyxy pixel coord
-    x1_pixel = (boxes[:, 1] - boxes[:, 3] / 2) * origin_width
-    y1_pixel = (boxes[:, 2] - boxes[:, 4] / 2) * origin_height
-    x2_pixel = (boxes[:, 1] + boxes[:, 3] / 2) * origin_width
-    y2_pixel = (boxes[:, 2] + boxes[:, 4] / 2) * origin_height
-    # adjust them according to cropped pixel
-    x1_pixel -= left_crop_pixel
-    y1_pixel -= top_crop_pixel
-    x2_pixel -= left_crop_pixel
-    y2_pixel -= top_crop_pixel
-    # constrain them inside the img
-    x1_pixel[x1_pixel < 0], y1_pixel[y1_pixel < 0], x2_pixel[x2_pixel < 0], y2_pixel[y2_pixel < 0] = 0, 0, 0, 0
-    x1_pixel[x1_pixel > cropped_width], y1_pixel[y1_pixel > cropped_height], x2_pixel[x2_pixel > cropped_width], y2_pixel[y2_pixel > cropped_height] = cropped_width, cropped_height, cropped_width, cropped_height
-    # return to xywh pixel coord
-    x_pixel = (x1_pixel + x2_pixel) / 2
-    y_pixel = (y1_pixel + y2_pixel) / 2
-    w_pixel = x2_pixel - x1_pixel
-    h_pixel = y2_pixel - y1_pixel
-    # boxes saves the targets' ratio of whole img
-    boxes[:, 1] = x_pixel / cropped_width
-    boxes[:, 2] = y_pixel / cropped_height
-    boxes[:, 3] = w_pixel / cropped_width
-    boxes[:, 4] = h_pixel / cropped_height
-    # drop bad target
-    boxes = boxes[boxes[:, 3] > 0.001]
-    boxes = boxes[boxes[:, 4] > 0.001]
-    # randomly filp img
-    flip = random.randint(1, 10000) % 2
-    if flip:
-        cropped = cropped.transpose(Image.FLIP_LEFT_RIGHT)
-        boxes[:, 1] = 0.999 - boxes[:, 1]
+    # # --- crop img according to jitter ---
+    # origin_height = img.height
+    # origin_width = img.width
+    #
+    # width_jitter_range = int(origin_width * jitter)
+    # height_jitter_range = int(origin_height * jitter)
+    #
+    # left_crop_pixel = random.randint(-width_jitter_range, width_jitter_range)
+    # right_crop_pixel = random.randint(-width_jitter_range, width_jitter_range)
+    # top_crop_pixel = random.randint(-height_jitter_range, height_jitter_range)
+    # bottom_crop_pixel = random.randint(-height_jitter_range, height_jitter_range)
+    #
+    # cropped_width = origin_width - left_crop_pixel - right_crop_pixel
+    # cropped_height = origin_height - top_crop_pixel - bottom_crop_pixel
+    #
+    # cropped = img.crop((left_crop_pixel, top_crop_pixel, left_crop_pixel + cropped_width - 1, top_crop_pixel + cropped_height - 1))
+    #
+    # # ---- adjust label boxes ----
+    # # get xyxy pixel coord
+    # x1_pixel = (boxes[:, 1] - boxes[:, 3] / 2) * origin_width
+    # y1_pixel = (boxes[:, 2] - boxes[:, 4] / 2) * origin_height
+    # x2_pixel = (boxes[:, 1] + boxes[:, 3] / 2) * origin_width
+    # y2_pixel = (boxes[:, 2] + boxes[:, 4] / 2) * origin_height
+    # # adjust them according to cropped pixel
+    # x1_pixel -= left_crop_pixel
+    # y1_pixel -= top_crop_pixel
+    # x2_pixel -= left_crop_pixel
+    # y2_pixel -= top_crop_pixel
+    # # constrain them inside the img
+    # x1_pixel[x1_pixel < 0], y1_pixel[y1_pixel < 0], x2_pixel[x2_pixel < 0], y2_pixel[y2_pixel < 0] = 0, 0, 0, 0
+    # x1_pixel[x1_pixel > cropped_width], y1_pixel[y1_pixel > cropped_height], x2_pixel[x2_pixel > cropped_width], y2_pixel[y2_pixel > cropped_height] = cropped_width, cropped_height, cropped_width, cropped_height
+    # # return to xywh pixel coord
+    # x_pixel = (x1_pixel + x2_pixel) / 2
+    # y_pixel = (y1_pixel + y2_pixel) / 2
+    # w_pixel = x2_pixel - x1_pixel
+    # h_pixel = y2_pixel - y1_pixel
+    # # boxes saves the targets' ratio of whole img
+    # boxes[:, 1] = x_pixel / cropped_width
+    # boxes[:, 2] = y_pixel / cropped_height
+    # boxes[:, 3] = w_pixel / cropped_width
+    # boxes[:, 4] = h_pixel / cropped_height
+    # # drop bad target
+    # boxes = boxes[boxes[:, 3] > 0.001]
+    # boxes = boxes[boxes[:, 4] > 0.001]
+    # # randomly filp img
+    # flip = random.randint(1, 10000) % 2
+    # if flip:
+    #     cropped = cropped.transpose(Image.FLIP_LEFT_RIGHT)
+    #     boxes[:, 1] = 0.999 - boxes[:, 1]
     # adjust in HSV color space
-    img = random_distort_image(cropped, hue, saturation, exposure)
+    # img = random_distort_image(cropped, hue, saturation, exposure)
+    img = random_distort_image(img, hue, saturation, exposure)
+
 
     return img, boxes
 
