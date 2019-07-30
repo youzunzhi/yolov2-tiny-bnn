@@ -80,10 +80,8 @@ class Logger(object):
                           # "nms merging": "yes",
                           # "RegionLoss": 1,
                           "lr": "0-60-90",
-                          # "1st acti-layer": "leaky",
                           "cls_scale": 2,
-                          "input bin": 'yes',
-                          "bin-block": "bn-act-conv-pool"}
+                          "bn momentum": 0.1}
         self.print_log(str(variation_dict))
 
     def time_string(self):

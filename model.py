@@ -105,13 +105,11 @@ class Model(BaseModel):
 
                 self.optimizer.zero_grad()
                 loss.backward()
-                for p in list(self.modules_list.parameters()):
-                    if hasattr(p, 'org'):
-                        p.data.copy_(p.org)
+                for modules in self.modules_list:
+                    if len(modules) and isinstance(modules[0], BinarizeConv2d): # 空modules的问题得整整
+                        modules[0].restore()
+                        modules[0].update_binary_grad()
                 self.optimizer.step()
-                for p in list(self.modules_list.parameters()):
-                    if hasattr(p, 'org'):
-                        p.org.copy_(p.data.clamp_(-1, 1))
 
                 log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), self.learning_rate, start_time,
                                    self.modules_list[-1][0].metrics, self.logger)
@@ -209,7 +207,6 @@ class Model(BaseModel):
                             kernel_size=kernel_size,
                             stride=stride,
                             padding=pad,
-                            bias=not bn,
                         ),
                     )
                     binarize_flag = True
@@ -234,26 +231,26 @@ class Model(BaseModel):
                             bias=not bn,
                         ),
                     )
-                if bn:
-                    modules.add_module(
-                        f"batchnorm_{modules_i}",
-                        nn.BatchNorm2d(filters, momentum=0.9, eps=1e-5)
-                    )
-                if modules_def["activation"] == "leaky":
-                    modules.add_module(
-                        f"leaky_{modules_i}",
-                        nn.LeakyReLU(0.1, inplace=True)
-                    )
-                elif modules_def["activation"] == "tanh":
-                    modules.add_module(
-                        f"tanh_{modules_i}",
-                        nn.Hardtanh(inplace=True)
-                    )
-                elif modules_def["activation"] == "prelu":
-                    modules.add_module(
-                        f"prelu_{modules_i}",
-                        nn.PReLU()
-                    )
+                    if bn:
+                        modules.add_module(
+                            f"batchnorm_{modules_i}",
+                            nn.BatchNorm2d(filters, momentum=0.1, eps=1e-5)
+                        )
+                    if modules_def["activation"] == "leaky":
+                        modules.add_module(
+                            f"leaky_{modules_i}",
+                            nn.LeakyReLU(0.1, inplace=True)
+                        )
+                    elif modules_def["activation"] == "tanh":
+                        modules.add_module(
+                            f"tanh_{modules_i}",
+                            nn.Hardtanh(inplace=True)
+                        )
+                    elif modules_def["activation"] == "prelu":
+                        modules.add_module(
+                            f"prelu_{modules_i}",
+                            nn.PReLU()
+                        )
                 output_filters.append(filters)
             elif modules_def["type"] == "maxpool":
                 if binarize_flag:

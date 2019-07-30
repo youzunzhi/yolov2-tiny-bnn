@@ -13,26 +13,79 @@ def Binarize(tensor,quant_mode='det'):
     else:
         return tensor.add_(1).div_(2).add_(torch.rand(tensor.size()).add(-0.5)).clamp_(0, 1).round().mul_(2).add_(-1)
 
-
-class BinarizeConv2d(nn.Conv2d):
-    def __init__(self, *kargs, **kwargs):
-        super(BinarizeConv2d, self).__init__(*kargs, **kwargs)
-
+class BinActive(torch.autograd.Function):
+    '''
+    Binarize the input activations and calculate the mean across channel dimension.
+    '''
     def forward(self, input):
-        if input.size(1) != 3:
-            input.data = Binarize(input.data)
-        if not hasattr(self.weight, 'org'):
-            self.weight.org = self.weight.data.clone()
-        self.weight.data = Binarize(self.weight.org)
+        self.save_for_backward(input)
+        size = input.size()
+        mean = torch.mean(input.abs(), 1, keepdim=True)
+        input = input.sign()
+        return input, mean
 
-        out = F.conv2d(input, self.weight, bias=None, stride=self.stride,
-                        padding=self.padding, dilation=self.dilation, groups=self.groups)
+    def backward(self, grad_output, grad_output_mean):
+        input, = self.saved_tensors
+        grad_input = grad_output.clone()
+        grad_input[input.ge(1)] = 0
+        grad_input[input.le(-1)] = 0
+        return grad_input
 
-        if self.bias is not None:
-            self.bias.org = self.bias.data.clone()
-            out += self.bias.view(1, -1, 1, 1).expand_as(out)
 
-        return out
+class BinarizeConv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
+        super(BinarizeConv2d, self).__init__()
+        self.bn = nn.BatchNorm2d(in_channels, eps=1e-4, momentum=0.1, affine=True)
+        self.bn.weight.data = self.bn.weight.data.zero_().add(1.0)
+        self.conv = nn.Conv2d(in_channels, out_channels,
+                              kernel_size=kernel_size, stride=stride,
+                              padding=padding, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.bn(x)
+        x, mean = BinActive()(x)
+        self.binarize_conv_params()
+        x = self.conv(x)
+        x = self.relu(x)
+        return x
+
+    def binarize_conv_params(self):
+        # mean center conv params:
+        s = self.conv.weight.data.size()
+        negMean = self.conv.weight.data.mean(1, keepdim=True).mul(-1).expand_as(self.conv.weight.data)
+        self.conv.weight.data = self.conv.weight.data.add(negMean)
+
+        # clamp conv params:
+        self.conv.weight.data = self.conv.weight.data.clamp(-1.0, 1.0)
+
+        # save params:
+        self.conv.weight.org = self.conv.weight.data.clone()
+
+        # binarize:
+        n = self.conv.weight.data[0].nelement()
+        s = self.conv.weight.data.size()
+        m = self.conv.weight.data.norm(1, 3, keepdim=True).sum(2, keepdim=True).sum(1, keepdim=True).div(n)
+        self.conv.weight.data = self.conv.weight.data.sign().mul(m.expand(s))
+
+    def restore(self):
+        self.conv.weight.data.copy_(self.conv.weight.org)
+
+    def update_binary_grad(self):
+        weight = self.conv.weight.data
+        n = weight[0].nelement()
+        s = weight.size()
+        m = weight.norm(1, 3, keepdim=True) \
+            .sum(2, keepdim=True).sum(1, keepdim=True).div(n).expand(s)
+        m[weight.lt(-1.0)] = 0
+        m[weight.gt(1.0)] = 0
+        m = m.mul(self.conv.weight.grad.data)
+        m_add = weight.sign().mul(self.conv.weight.grad.data)
+        m_add = m_add.sum(3, keepdim=True) \
+            .sum(2, keepdim=True).sum(1, keepdim=True).div(n).expand(s)
+        m_add = m_add.mul(weight.sign())
+        self.conv.weight.grad.data = m.add(m_add).mul(1.0 - 1.0 / s[1]).mul(n)
+
 
 class MaxPoolStride1(nn.Module):
     def __init__(self):
