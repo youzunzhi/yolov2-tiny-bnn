@@ -56,7 +56,7 @@ class Model(BaseModel):
         self.options = options
         self.logger = logger
         self.modules_defs = self.parse_model_cfg(options.model_cfg)
-        self.hyper_parameters, self.modules_list = self.get_module_list()
+        self.hyper_parameters, self.modules= self.get_modules()
         self.batch_size = self.options.batch_size
         self.training = training
         if training:
@@ -77,7 +77,7 @@ class Model(BaseModel):
                 weights_file = self.options.pretrained_weights
 
             decay = float(self.hyper_parameters['decay'])
-            self.optimizer = optim.SGD(self.modules_list.parameters(),
+            self.optimizer = optim.SGD(self.modules.parameters(),
                                        lr=self.learning_rate/self.batch_size,
                                        momentum=float(self.hyper_parameters['momentum']),
                                        weight_decay=decay*self.batch_size)
@@ -94,25 +94,20 @@ class Model(BaseModel):
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
                 inputs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
-                for i, (module_def, module) in enumerate(zip(self.modules_defs, self.modules_list)):
-                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                        inputs = module(inputs)
-                    elif module_def["type"] == "region":
-                        loss = module[0](inputs, self.seen, targets)
-                        self.seen += inputs.shape[0]
-                    else:
-                        print('unknown type %s' % (module_def['type']))
+                for i, module in enumerate(self.modules[:-1]):
+                    inputs = module(inputs)
+                loss = self.modules[-1](inputs, self.seen, targets)
 
                 self.optimizer.zero_grad()
                 loss.backward()
-                for modules in self.modules_list:
-                    if len(modules) and isinstance(modules[0], BinarizeConv2d): # 空modules的问题得整整
-                        modules[0].restore()
-                        modules[0].update_binary_grad()
+                for module in self.modules:
+                    if isinstance(module, BinarizeConv2d):
+                        module.restore()
+                        module.update_binary_grad()
                 self.optimizer.step()
 
                 log_train_progress(epoch, total_epochs, batch_i, len(train_dataloader), self.learning_rate, start_time,
-                                   self.modules_list[-1][0].metrics, self.logger)
+                                   self.modules[-1].metrics, self.logger)
 
             if epoch % self.options.eval_interval == self.options.eval_interval - 1:
                 self.logger.print_log("\n---- Evaluating Model ----")
@@ -144,14 +139,10 @@ class Model(BaseModel):
             for target in targets:
                 target[2:] *= imgs_size[target[0].long()]
             with torch.no_grad():
-                for i, (module_def, module) in enumerate(zip(self.modules_defs, self.modules_list)):
-                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                        inputs = module(inputs)
-                    elif module_def["type"] == "region":
-                        outputs = module[0](inputs, 0)
-                        outputs = outputs.cpu()
-                    else:
-                        print('unknown type %s' % (module_def['type']))
+                for i, module in enumerate(self.modules[:-1]):
+                    inputs = module(inputs)
+                outputs = self.modules[-1](inputs, 0)
+                outputs = outputs.cpu()
 
             predictions = non_max_suppression(outputs, imgs_size, self.options.conf_thresh, self.options.nms_thresh)
             metrics += get_batch_metrics(predictions, targets)
@@ -171,8 +162,6 @@ class Model(BaseModel):
             if line.startswith('['):  # This marks the start of a new block
                 module_defs.append({})
                 module_defs[-1]['type'] = line[1:-1].rstrip()
-                if module_defs[-1]['type'] == 'convolutional':
-                    module_defs[-1]['batch_normalize'] = 0
             else:
                 key, value = line.split("=")
                 value = value.strip()
@@ -180,19 +169,17 @@ class Model(BaseModel):
 
         return module_defs
 
-    def get_module_list(self):
+    def get_modules(self):
         """
             Constructs module list of layer blocks from module configuration in modules_def
         """
         hyper_parameters = self.modules_defs.pop(0)
         output_filters = [int(hyper_parameters["channels"])]
-        modules_list = nn.ModuleList()
-        binarize_flag = False
+        modules = nn.Sequential()
+        # binarize_flag = False
         for modules_i, modules_def in enumerate(self.modules_defs):
-            modules = nn.Sequential()
 
             if modules_def["type"] == "convolutional":
-                bn = int(modules_def["batch_normalize"])
                 filters = int(modules_def["filters"])
                 kernel_size = int(modules_def["size"])
                 stride = int(modules_def["stride"])
@@ -209,17 +196,8 @@ class Model(BaseModel):
                             padding=pad,
                         ),
                     )
-                    binarize_flag = True
-                    module_def_pool = self.modules_defs[modules_i + 1]
-                    if module_def_pool["type"] == "maxpool":
-                        pool_size = int(module_def_pool['size'])
-                        stride = int(module_def_pool['stride'])
-                        if stride > 1:
-                            maxpool = nn.MaxPool2d(pool_size, stride)
-                        else:
-                            maxpool = MaxPoolStride1()
-                        modules.add_module(f"maxpool_{modules_i}", maxpool)
                 else:
+                    bn = int(modules_def["batch_normalize"]) if "batch_normalize" in modules_def else 0
                     modules.add_module(
                         f"conv_{modules_i}",
                         nn.Conv2d(
@@ -253,16 +231,13 @@ class Model(BaseModel):
                         )
                 output_filters.append(filters)
             elif modules_def["type"] == "maxpool":
-                if binarize_flag:
-                    binarize_flag = False
+                pool_size = int(modules_def['size'])
+                stride = int(modules_def['stride'])
+                if stride > 1:
+                    maxpool = nn.MaxPool2d(pool_size, stride)
                 else:
-                    pool_size = int(modules_def['size'])
-                    stride = int(modules_def['stride'])
-                    if stride > 1:
-                        maxpool = nn.MaxPool2d(pool_size, stride)
-                    else:
-                        maxpool = MaxPoolStride1()
-                    modules.add_module(f"maxpool_{modules_i}", maxpool)
+                    maxpool = MaxPoolStride1()
+                modules.add_module(f"maxpool_{modules_i}", maxpool)
 
             elif modules_def["type"] == "region":
                 region = RegionLoss(modules_def)
@@ -271,10 +246,9 @@ class Model(BaseModel):
             else:
                 print('unknown type %s' % (modules_def['type']))
 
-            modules = modules.cuda()
-            modules_list.append(modules)
+        modules = modules.cuda()
 
-        return hyper_parameters, modules_list
+        return hyper_parameters, modules
 
     def adjust_learning_rate(self, epoch):
         if epoch == 60:
@@ -309,51 +283,47 @@ class Model(BaseModel):
             cutoff = 13
 
         ptr = 0
-        for i, (modules_def, modules) in enumerate(zip(self.modules_defs, self.modules_list)):
+        for i, module in enumerate(self.modules):
             if i == cutoff:
                 break
-            if modules_def["type"] == "convolutional":
-                for module in modules:
-                    if isinstance(module, nn.Conv2d):
-                        conv_layer = module
-                        break
-                if modules_def["batch_normalize"]:
-                    for module in modules:
-                        if isinstance(module, nn.BatchNorm2d):
-                            bn_layer = module
-                            break
-                    # Load BN bias, weights, running mean and running variance
-                    num_b = bn_layer.bias.numel()  # Number of biases
-                    # Bias
-                    bn_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.bias)
-                    bn_layer.bias.data.copy_(bn_b)
-                    ptr += num_b
-                    # Weight
-                    bn_w = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.weight)
-                    bn_layer.weight.data.copy_(bn_w)
-                    ptr += num_b
-                    # Running Mean
-                    bn_rm = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_mean)
-                    bn_layer.running_mean.data.copy_(bn_rm)
-                    ptr += num_b
-                    # Running Var
-                    bn_rv = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_var)
-                    bn_layer.running_var.data.copy_(bn_rv)
-                    ptr += num_b
-                else:
-                    # Load conv. bias
-                    num_b = conv_layer.bias.numel()
-                    conv_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(conv_layer.bias)
-                    conv_layer.bias.data.copy_(conv_b)
-                    ptr += num_b
-                # Load conv. weights
+            if isinstance(module, nn.Conv2d):
+                conv_layer = module
                 num_w = conv_layer.weight.numel()
                 conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
                 conv_layer.weight.data.copy_(conv_w)
                 ptr += num_w
 
-    def save_weights(self, fname, cutoff=-1):
+            elif isinstance(module, nn.BatchNorm2d):
+                bn_layer = module
+                # Load BN bias, weights, running mean and running variance
+                num_b = bn_layer.bias.numel()  # Number of biases
+                # Bias
+                bn_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.bias)
+                bn_layer.bias.data.copy_(bn_b)
+                ptr += num_b
+                # Weight
+                bn_w = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.weight)
+                bn_layer.weight.data.copy_(bn_w)
+                ptr += num_b
+                # Running Mean
+                bn_rm = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_mean)
+                bn_layer.running_mean.data.copy_(bn_rm)
+                ptr += num_b
+                # Running Var
+                bn_rv = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_var)
+                bn_layer.running_var.data.copy_(bn_rv)
+                ptr += num_b
+            elif isinstance(module, BinarizeConv2d):
+                conv_layer = module.conv
+                num_w = conv_layer.weight.numel()
+                conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
+                conv_layer.weight.data.copy_(conv_w)
+                ptr += num_w
+
+
+    def save_weights(self, fname):
         """
+        暂时先不保存BinConv的bn和Conv的bias,便于load_weights直接读取saved weights.等到需要时再写相关代码.
         :param path: path of the new weights file
         :param cutoff: save layers between 0 and cutoff (cutoff == -1 -> all save)
         :return:
@@ -363,26 +333,19 @@ class Model(BaseModel):
         self.header_info.tofile(fp)
 
         # Iterate through layers
-        for i, (modules_def, modules) in enumerate(zip(self.modules_defs[:cutoff], self.modules_list[:cutoff])):
-            if int(modules_def["binarize"]) if "binarize" in modules_def else 0:
-                for module in modules:
-                    if isinstance(module, nn.Conv2d):
-                        conv_layer = module
-                        break
-                # If batch norm, save bn first
-                if modules_def["batch_normalize"]:
-                    for module in modules:
-                        if isinstance(module, nn.BatchNorm2d):
-                            bn_layer = module
-                            break
-                    bn_layer.bias.data.cpu().numpy().tofile(fp)
-                    bn_layer.weight.data.cpu().numpy().tofile(fp)
-                    bn_layer.running_mean.data.cpu().numpy().tofile(fp)
-                    bn_layer.running_var.data.cpu().numpy().tofile(fp)
-                # save conv bias
-                else:
-                    conv_layer.bias.data.cpu().numpy().tofile(fp)
-                # save conv weights
+        for i, module in enumerate(self.modules):
+            if isinstance(module, nn.Conv2d):
+                conv_layer = module
+                conv_layer.weight.data.cpu().numpy().tofile(fp)
+
+            elif isinstance(module, nn.BatchNorm2d):
+                bn_layer = module
+                bn_layer.bias.data.cpu().numpy().tofile(fp)
+                bn_layer.weight.data.cpu().numpy().tofile(fp)
+                bn_layer.running_mean.data.cpu().numpy().tofile(fp)
+                bn_layer.running_var.data.cpu().numpy().tofile(fp)
+            elif isinstance(module, BinarizeConv2d):
+                conv_layer = module.conv
                 conv_layer.weight.data.cpu().numpy().tofile(fp)
 
         fp.close()

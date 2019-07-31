@@ -33,7 +33,7 @@ class Options(object):
             parser.add_argument("--eval_interval", type=int, default=1, help="interval of evaluations on validation set")
             parser.add_argument("--save_interval", type=int, default=1, help="interval of saving model weights")
             parser.add_argument('--save_path', type=str, default='./weights/', help='Folder to save checkpoints and log.')
-            parser.add_argument("--pretrained_weights", type=str, default="weights/yolov2-tiny-voc.weights", help="path to pretrained weights file")
+            parser.add_argument("--pretrained_weights", type=str, default="weights/xnor-yolov2-tiny-voc.weights", help="path to pretrained weights file")
             parser.add_argument("--conf_thresh", type=float, default=0.25, help="only keep detections with conf higher than conf_thresh")
 
         else:
@@ -81,7 +81,8 @@ class Logger(object):
                           # "RegionLoss": 1,
                           "lr": "0-60-90",
                           "cls_scale": 2,
-                          "bn momentum": 0.1}
+                          "bn momentum": 0.1,
+                          "activ after conv": 'leaky'}
         self.print_log(str(variation_dict))
 
     def time_string(self):

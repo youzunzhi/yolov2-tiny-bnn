@@ -40,14 +40,16 @@ class BinarizeConv2d(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels,
                               kernel_size=kernel_size, stride=stride,
                               padding=padding, bias=False)
-        self.relu = nn.ReLU(inplace=True)
+        # self.relu = nn.ReLU(inplace=True)
+        self.leaky = nn.LeakyReLU(inplace=True)
 
     def forward(self, x):
         x = self.bn(x)
         x, mean = BinActive()(x)
         self.binarize_conv_params()
         x = self.conv(x)
-        x = self.relu(x)
+        # x = self.relu(x)
+        x = self.leaky(x)
         return x
 
     def binarize_conv_params(self):
