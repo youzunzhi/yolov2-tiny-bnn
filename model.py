@@ -302,7 +302,7 @@ class Model(BaseModel):
                 break
             if isinstance(module, nn.Conv2d):
                 conv_layer = module
-                if not isinstance(self.modules[i+1], nn.BatchNorm2d):
+                if not isinstance(self.modules[i+2], nn.BatchNorm2d) and not isinstance(self.modules[i+1], nn.BatchNorm2d):
                     # Load conv. bias
                     num_b = conv_layer.bias.numel()
                     conv_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(conv_layer.bias)
