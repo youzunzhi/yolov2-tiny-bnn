@@ -12,13 +12,7 @@ if __name__ == "__main__":
         pydevd_pycharm.settrace('172.26.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
 
     dataset = Yolov2Dataset(options, training=False)
-    dataloader = DataLoader(
-        dataset,
-        batch_size=options.batch_size,
-        shuffle=False,
-        num_workers=0,
-        collate_fn=dataset.collate_fn
-    )
+    dataloader = dataset.get_dataloader()
 
     model = Model(options, logger, training=False)
     model.eval(dataloader)
