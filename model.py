@@ -77,7 +77,7 @@ class Model(BaseModel):
                 weights_file = self.options.pretrained_weights
 
             decay = float(self.hyper_parameters['decay'])
-            self.optimizer = optim.SGD(self.modules_list.parameters(),
+            self.optimizer = optim.SGD(self.modules.parameters(),
                                        lr=self.learning_rate/self.batch_size,
                                        momentum=float(self.hyper_parameters['momentum']),
                                        weight_decay=decay*self.batch_size)
