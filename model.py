@@ -56,7 +56,7 @@ class Model(BaseModel):
         self.options = options
         self.logger = logger
         self.modules_defs = self.parse_model_cfg(options.model_cfg)
-        self.hyper_parameters, self.modules_list = self.get_module_list()
+        self.hyper_parameters, self.modules = self.get_modules()
         self.batch_size = self.options.batch_size
         self.training = training
         if training:
@@ -94,14 +94,9 @@ class Model(BaseModel):
             for batch_i, (imgs, targets, img_path) in enumerate(train_dataloader):
                 inputs = Variable(imgs.type(torch.cuda.FloatTensor))
                 targets = Variable(targets.type(torch.cuda.FloatTensor), requires_grad=False)
-                for i, (module_def, module) in enumerate(zip(self.modules_defs, self.modules_list)):
-                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                        inputs = module(inputs)
-                    elif module_def["type"] == "region":
-                        loss = module[0](inputs, self.seen, targets)
-                        self.seen += inputs.shape[0]
-                    else:
-                        print('unknown type %s' % (module_def['type']))
+                for module in self.modules[:-1]:
+                    inputs = module(inputs)
+                loss = self.modules[-1](inputs, self.seen, targets)
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -146,14 +141,10 @@ class Model(BaseModel):
             for target in targets:
                 target[2:] *= imgs_size[target[0].long()]
             with torch.no_grad():
-                for i, (module_def, module) in enumerate(zip(self.modules_defs, self.modules_list)):
-                    if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                        inputs = module(inputs)
-                    elif module_def["type"] == "region":
-                        outputs = module[0](inputs, 0)
-                        outputs = outputs.cpu()
-                    else:
-                        print('unknown type %s' % (module_def['type']))
+                for i, module in enumerate(self.modules[:-1]):
+                    inputs = module(inputs)
+                outputs = self.modules[-1](inputs, 0)
+                outputs = outputs.cpu()
 
             predictions = non_max_suppression(outputs, imgs_size, self.options.conf_thresh, self.options.nms_thresh)
             metrics += get_batch_metrics(predictions, targets)
@@ -182,16 +173,15 @@ class Model(BaseModel):
 
         return module_defs
 
-    def get_module_list(self):
+    def get_modules(self):
         """
-            Constructs module list of layer blocks from module configuration in modules_def
+            Constructs modules(nn.Sequential) of layer blocks from module configuration in modules_defs
         """
         hyper_parameters = self.modules_defs.pop(0)
         output_filters = [int(hyper_parameters["channels"])]
-        modules_list = nn.ModuleList()
+        modules = nn.Sequential()
         binarize_flag = False
         for modules_i, modules_def in enumerate(self.modules_defs):
-            modules = nn.Sequential()
 
             if modules_def["type"] == "convolutional":
                 bn = int(modules_def["batch_normalize"])
@@ -201,6 +191,7 @@ class Model(BaseModel):
                 pad = (kernel_size - 1) // 2
                 binarize = int(modules_def["binarize"]) if "binarize" in modules_def else 0
                 if binarize:
+                    binarize_flag = True
                     modules.add_module(
                         f"bin_conv_{modules_i}",
                         BinarizeConv2d(
@@ -212,7 +203,6 @@ class Model(BaseModel):
                             bias=not bn,
                         ),
                     )
-                    binarize_flag = True
                     module_def_pool = self.modules_defs[modules_i + 1]
                     if module_def_pool["type"] == "maxpool":
                         pool_size = int(module_def_pool['size'])
@@ -274,10 +264,9 @@ class Model(BaseModel):
             else:
                 print('unknown type %s' % (modules_def['type']))
 
-            modules = modules.cuda()
-            modules_list.append(modules)
+        modules = modules.cuda()
 
-        return hyper_parameters, modules_list
+        return hyper_parameters, modules
 
     def adjust_learning_rate(self, epoch):
         if epoch == 60:
@@ -299,10 +288,6 @@ class Model(BaseModel):
             header = np.fromfile(f, dtype=np.int32, count=4)  # First four are header values
             self.header_info = header  # Needed to write header when saving weights
             if self.training:
-                # if self.options.just_pretrained:
-                #     self.seen = 0
-                # else:
-                #     self.seen = header[3]  # number of images seen during training
                 self.seen = header[3]  # number of images seen during training
             weights = np.fromfile(f, dtype=np.float32)  # The rest are weights
 
@@ -312,43 +297,41 @@ class Model(BaseModel):
             cutoff = 13
 
         ptr = 0
-        for i, (modules_def, modules) in enumerate(zip(self.modules_defs, self.modules_list)):
+        for i, module in enumerate(self.modules):
             if i == cutoff:
                 break
-            if modules_def["type"] == "convolutional":
-                for module in modules:
-                    if isinstance(module, nn.Conv2d):
-                        conv_layer = module
-                        break
-                if modules_def["batch_normalize"]:
-                    for module in modules:
-                        if isinstance(module, nn.BatchNorm2d):
-                            bn_layer = module
-                            break
-                    # Load BN bias, weights, running mean and running variance
-                    num_b = bn_layer.bias.numel()  # Number of biases
-                    # Bias
-                    bn_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.bias)
-                    bn_layer.bias.data.copy_(bn_b)
-                    ptr += num_b
-                    # Weight
-                    bn_w = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.weight)
-                    bn_layer.weight.data.copy_(bn_w)
-                    ptr += num_b
-                    # Running Mean
-                    bn_rm = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_mean)
-                    bn_layer.running_mean.data.copy_(bn_rm)
-                    ptr += num_b
-                    # Running Var
-                    bn_rv = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_var)
-                    bn_layer.running_var.data.copy_(bn_rv)
-                    ptr += num_b
-                else:
+            if isinstance(module, nn.Conv2d):
+                conv_layer = module
+                if not isinstance(self.modules[i+1], nn.BatchNorm2d):
                     # Load conv. bias
                     num_b = conv_layer.bias.numel()
                     conv_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(conv_layer.bias)
                     conv_layer.bias.data.copy_(conv_b)
                     ptr += num_b
+                    # Load conv. weights
+                    num_w = conv_layer.weight.numel()
+                    conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
+                    conv_layer.weight.data.copy_(conv_w)
+                    ptr += num_w
+            elif isinstance(module, nn.BatchNorm2d):
+                bn_layer = module
+                num_b = bn_layer.bias.numel()  # Number of biases
+                # Bias
+                bn_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.bias)
+                bn_layer.bias.data.copy_(bn_b)
+                ptr += num_b
+                # Weight
+                bn_w = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.weight)
+                bn_layer.weight.data.copy_(bn_w)
+                ptr += num_b
+                # Running Mean
+                bn_rm = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_mean)
+                bn_layer.running_mean.data.copy_(bn_rm)
+                ptr += num_b
+                # Running Var
+                bn_rv = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_var)
+                bn_layer.running_var.data.copy_(bn_rv)
+                ptr += num_b
                 # Load conv. weights
                 num_w = conv_layer.weight.numel()
                 conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
@@ -366,26 +349,19 @@ class Model(BaseModel):
         self.header_info.tofile(fp)
 
         # Iterate through layers
-        for i, (modules_def, modules) in enumerate(zip(self.modules_defs[:cutoff], self.modules_list[:cutoff])):
-            if int(modules_def["binarize"]) if "binarize" in modules_def else 0:
-                for module in modules:
-                    if isinstance(module, nn.Conv2d):
-                        conv_layer = module
-                        break
-                # If batch norm, save bn first
-                if modules_def["batch_normalize"]:
-                    for module in modules:
-                        if isinstance(module, nn.BatchNorm2d):
-                            bn_layer = module
-                            break
-                    bn_layer.bias.data.cpu().numpy().tofile(fp)
-                    bn_layer.weight.data.cpu().numpy().tofile(fp)
-                    bn_layer.running_mean.data.cpu().numpy().tofile(fp)
-                    bn_layer.running_var.data.cpu().numpy().tofile(fp)
-                # save conv bias
-                else:
+        for i, modules in enumerate(self.modules[:cutoff]):
+            if isinstance(module, nn.Conv2d):
+                conv_layer = module
+                if not isinstance(self.modules[i + 1], nn.BatchNorm2d):
                     conv_layer.bias.data.cpu().numpy().tofile(fp)
-                # save conv weights
+                    conv_layer.weight.data.cpu().numpy().tofile(fp)
+
+            elif isinstance(module, nn.BatchNorm2d):
+                bn_layer = module
+                bn_layer.bias.data.cpu().numpy().tofile(fp)
+                bn_layer.weight.data.cpu().numpy().tofile(fp)
+                bn_layer.running_mean.data.cpu().numpy().tofile(fp)
+                bn_layer.running_var.data.cpu().numpy().tofile(fp)
                 conv_layer.weight.data.cpu().numpy().tofile(fp)
 
         fp.close()
