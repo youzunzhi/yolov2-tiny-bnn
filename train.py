@@ -9,7 +9,7 @@ if __name__ == "__main__":
     logger.print_options(options)
 
     if options.debug:
-        pydevd_pycharm.settrace('223.96.64.20', port=12344, stdoutToServer=True, stderrToServer=True)
+        pydevd_pycharm.settrace('172.126.3.54', port=12344, stdoutToServer=True, stderrToServer=True)
 
     train_dataset = Yolov2Dataset(options, training=True)
     eval_dataset = Yolov2Dataset(options, training=False)
