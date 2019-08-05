@@ -308,11 +308,13 @@ class Model(BaseModel):
                     conv_b = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(conv_layer.bias)
                     conv_layer.bias.data.copy_(conv_b)
                     ptr += num_b
+                    print('conv bias: + ', num_b, ' = ', ptr)
                     # Load conv. weights
                     num_w = conv_layer.weight.numel()
                     conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
                     conv_layer.weight.data.copy_(conv_w)
                     ptr += num_w
+                    print('conv weights: + ', num_w, ' = ', ptr)
             elif isinstance(module, nn.BatchNorm2d):
                 bn_layer = module
                 num_b = bn_layer.bias.numel()  # Number of biases
@@ -332,11 +334,13 @@ class Model(BaseModel):
                 bn_rv = torch.from_numpy(weights[ptr: ptr + num_b]).view_as(bn_layer.running_var)
                 bn_layer.running_var.data.copy_(bn_rv)
                 ptr += num_b
+                print('bn: + ', num_b*4, ' = ', ptr)
                 # Load conv. weights
                 num_w = conv_layer.weight.numel()
                 conv_w = torch.from_numpy(weights[ptr: ptr + num_w]).view_as(conv_layer.weight)
                 conv_layer.weight.data.copy_(conv_w)
                 ptr += num_w
+                print('conv weights: + ', num_w, ' = ', ptr)
 
     def save_weights(self, fname, cutoff=-1):
         """
