@@ -81,9 +81,7 @@ class Logger(object):
                           # "RegionLoss": 1,
                           "lr": "0-60-90",
                           # "1st acti-layer": "leaky",
-                          "cls_scale": 2,
-                          "input bin": 'yes',
-                          "bin-block": "bn-act-conv-pool"}
+                          "cls_scale": 2}
         self.print_log(str(variation_dict))
 
     def time_string(self):
